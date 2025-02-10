@@ -1,1 +1,2 @@
-Unclosed '(' at line 3, column 9
+Invalid variable name starting with a digit at line 1, column 4
+Unclosed string literal at line 2, column 7
