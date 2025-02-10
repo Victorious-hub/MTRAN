@@ -12,3 +12,4 @@ C:\Users\datan\OneDrive\Рабочий стол\MTRAN\LR2\obj\Debug\net8.0-windo
 C:\Users\datan\OneDrive\Рабочий стол\MTRAN\LR2\obj\Debug\net8.0-windows\LR2.pdb
 C:\Users\datan\OneDrive\Рабочий стол\MTRAN\LR2\obj\Debug\net8.0-windows\LR2.genruntimeconfig.cache
 C:\Users\datan\OneDrive\Рабочий стол\MTRAN\LR2\obj\Debug\net8.0-windows\ref\LR2.dll
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\LR2\obj\Debug\net8.0-windows\LR2.sourcelink.json

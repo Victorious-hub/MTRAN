@@ -13,6 +13,9 @@ namespace MTRAN.LR2
 
         /* Literals*/
         INT,                // 123
+        HEX,
+        OCT,
+        BIN,
         NUMBER,              // 123.45, 1e+300
         IMAG,               // 123.45i
         STRING,             // 'abc'
@@ -25,7 +28,7 @@ namespace MTRAN.LR2
         LOR,                // ||
         LAND,               // &&
         LNOT,               // !
-        VAR,                // $a,...
+        IDENT,                // $a,... @a, %a
 
         BITWISE_XOR,        // ^
         BITWISE_AND,        // &
@@ -92,6 +95,8 @@ namespace MTRAN.LR2
         FUNC_SUB,           // sub(func declaration)
         USE,                // use
 
+        HASH_ASSIGN               //: '=>' ;
+
     }
     
     public class TokenDictionary
@@ -116,17 +121,20 @@ namespace MTRAN.LR2
 
         public readonly Dictionary<PerlToken, string> TokenPatterns = new()
         {
-
+            
             { PerlToken.COMMENT, @"#.*" },                      // comment (single line)
             
             /* Special tokens */
-            { PerlToken.VAR, @"\$[a-zA-Z_]\w*" },                // variable (e.g., $a, $var_name)
+            { PerlToken.IDENT, @"[\$@%][a-zA-Z_]\w*" },                // variable (e.g., $a, $var_name)
 
             { PerlToken.EQUAL, @"==" },                         // equality (e.g., ==)
             { PerlToken.ASSIGN, @"=" },                         // assignment (e.g., =)
             // { PerlToken.INT, @"\b[0-9]+\b" },                      // integer (e.g., 123)
-            { PerlToken.STRING, @"'([^'\\]|\\.)*'" },            // string (e.g., 'abc')
+            { PerlToken.STRING, @"(['""])(?:(?=(\\?))\2.)*?\1" },            // string (e.g., 'abc')
             { PerlToken.NUMBER, @"\b\d+(\.\d+)?([eE][-+]?\d+)?\b" }, // float (e.g., 123.45, 1e+300)
+            { PerlToken.HEX, @"\b0[xX][0-9a-fA-F]+\b" }, // hexadecimal (e.g., 0x1A3F)
+            { PerlToken.OCT, @"\b0[oO]?[0-7]+\b" },      // octal (e.g., 0755 or 0o755)
+            { PerlToken.BIN, @"\b0[bB][01]+\b" },
             { PerlToken.IMAG, @"\b\d+(\.\d+)?i\b" },             // imaginary number (e.g., 123.45i)
 
             { PerlToken.ADD, @"\+" },                           // addition (e.g., +)
@@ -136,6 +144,7 @@ namespace MTRAN.LR2
             { PerlToken.MOD, @"%" },                            // modulus (e.g., %)
             { PerlToken.INC, @"\+\+" },                         // increment (e.g., ++)
             { PerlToken.DEC, @"--" },                           // decrement (e.g., --)
+            { PerlToken.ILLEGAL, @"[^\x20-\x7E]" },           // any non-printable characters
 
             /* Literals */
             { PerlToken.COMMA, @"," },                          // comma (e.g., ,)
@@ -148,6 +157,14 @@ namespace MTRAN.LR2
             { PerlToken.SEMICOLON, @";" },                      // semicolon (e.g., ;)
             { PerlToken.COLON, @":" },                          // colon (e.g., :)
             { PerlToken.ELLIPSIS, @"\.\.\." },                   // ellipsis (e.g., ...)
+            { PerlToken.HASH_ASSIGN, @"=>" },                  // less or equal (e.g., <=)
+
+            { PerlToken.NOT_EQUAL, @"!=" },                     // not equal (e.g., !=)
+            { PerlToken.LESS_OR_EQUAL, @"<=" },                  // less or equal (e.g., <=)
+            { PerlToken.LESS, @"<=" },                           // less than (e.g., <)
+            { PerlToken.GRT, @">" },                            // greater than (e.g., >)
+            { PerlToken.GRT_OR_EQUAL, @">=" },                  // greater or equal (e.g., >=)
+            { PerlToken.DOT, @"\." },                           // dot (e.g., .)
            
             /* Operators */
             { PerlToken.OR, @"\bor\b" },                        // logical OR (e.g., or)
@@ -178,19 +195,7 @@ namespace MTRAN.LR2
             { PerlToken.BITWISE_RIGHT_ASSIGN, @">>=" },         // right shift assignment (e.g., >>=)
             { PerlToken.AND_NOT_ASSIGN, @"\&\^=" },             // bit clear assignment (e.g., &^=)
         
-           
-            { PerlToken.NOT_EQUAL, @"!=" },                     // not equal (e.g., !=)
-            { PerlToken.LESS, @"<" },                           // less than (e.g., <)
-            { PerlToken.LESS_OR_EQUAL, @"<=" },                  // less or equal (e.g., <=)
-            { PerlToken.GRT, @">" },                            // greater than (e.g., >)
-            { PerlToken.GRT_OR_EQUAL, @">=" },                  // greater or equal (e.g., >=)
-            { PerlToken.DOT, @"\." },                           // dot (e.g., .)
 
-            /* Delimiters */
-
-            /* Keywords */
-
-            { PerlToken.ILLEGAL, @"[^\x20-\x7E]" },           // any non-printable characters
             { PerlToken.EOF_, @"\z" },                          // end of string
         };
         
@@ -199,9 +204,11 @@ namespace MTRAN.LR2
     
     public class Token {
         public PerlToken TokenType {get; set;}
-        public string  Lexeme {get; set;}
+        public string Lexeme {get; set;} = string.Empty;
         public int Line { get; set; }
         public int Column { get; set; }
+        public int Id {get; set;} = 0;
+        public string Error { get; set; } = string.Empty;
         
         public Token(){}
 

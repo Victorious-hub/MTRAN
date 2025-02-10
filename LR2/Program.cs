@@ -26,11 +26,10 @@ class PerlTokenizer
 
                 var lexer = new PerlLexer(fileContent);
                 var tokens = lexer.Tokenize();
+                lexer.PrintTokens();
 
-                foreach (var token in tokens)
-                {
-                    Console.WriteLine($"Token: {token.TokenType} - Lexeme: {token.Lexeme} - Line: {token.Line} - Column: {token.Column}");
-                }
+                lexer.SaveModifiedCode("modified_variables.pl");
+
             }
             catch (Exception ex)
             {
@@ -41,5 +40,6 @@ class PerlTokenizer
         {
             Console.WriteLine("No file selected.");
         }
+
     }
 }

@@ -28,23 +28,42 @@ namespace MTRAN.LR2
             _column = 1;
         }
 
+        public void PrintTokens()
+        {
+            Console.WriteLine("{0,-5} {1,-15} {2,-15} {3,-10} {4,-10}", "ID", "Token Type", "Lexeme", "Line", "Column");
+            Console.WriteLine(new string('-', 60));
+            int id = 0;
+            foreach (var token in tokens)
+            {
+                token.Id = id;
+                Console.WriteLine("{0,-5} {1,-15} {2,-15} {3,-10} {4,-10}", id, token.TokenType, token.Lexeme, token.Line, token.Column);
+                id++;
+            }
+        }
+
         public List<Token> Tokenize()
         {
             var lines = _input.Split('\n');
+            var stack = new Stack<(char, int, int)>();
+            int id = 0;
+
             foreach (var line in lines)
             {
                 _index = 0;
                 while (_index < line.Length)
                 {
                     var currentChar = line[_index];
-
+                    
                     if (char.IsWhiteSpace(currentChar))
                     {
                         HandleWhitespace(line);
                         continue;
                     }
 
-                    if (char.IsDigit(currentChar))
+                    if (char.IsDigit(currentChar) || (currentChar == '0' && _index + 1 < line.Length && 
+                        (line[_index + 1] == 'x' || line[_index + 1] == 'X' || 
+                        line[_index + 1] == 'o' || line[_index + 1] == 'O' || 
+                        line[_index + 1] == 'b' || line[_index + 1] == 'B')))
                     {
                         var numberToken = LexNumber(line);
                         Console.WriteLine(numberToken.Lexeme);
@@ -55,20 +74,43 @@ namespace MTRAN.LR2
                     var punctuationToken = IsPunctuation(currentChar);
                     if (punctuationToken.HasValue)
                     {
-                        tokens.Add(new Token(punctuationToken.Value, currentChar.ToString(), _line, _column));
+                        var token = new Token(punctuationToken.Value, currentChar.ToString(), _line, _column);
+                        token.Id = id++;
+                        tokens.Add(token);
+
+                        if (currentChar == '(' || currentChar == '{' || currentChar == '[' || currentChar == '\'' || currentChar == '"')
+                        {
+                            stack.Push((currentChar, _line, _column));
+                        }
+                        else if (currentChar == ')' || currentChar == '}' || currentChar == ']')
+                        {
+                            if (stack.Count == 0 || !IsMatchingPair(stack.Peek().Item1, currentChar))
+                            {
+                                var errorToken = new Token(PerlToken.ILLEGAL, currentChar.ToString(), _line, _column)
+                                {
+                                    Id = id++,
+                                    Error = $"Unmatched closing '{currentChar}' at line {_line}, column {_column}"
+                                };
+                                tokens.Add(errorToken);
+                            }
+                            else
+                            {
+                                stack.Pop();
+                            }
+                        }
                         _index++;
                         _column++;
                         continue;
                     }
 
-                    // var operatorToken = IsOperator(line);
-                    // if (operatorToken.HasValue)
-                    // {
-                    //     tokens.Add(new Token(operatorToken.Value, line.Substring(_index, operatorToken.Value.ToString().Length), _line, _column));
-                    //     _index += operatorToken.Value.ToString().Length;
-                    //     _column += operatorToken.Value.ToString().Length;
-                    //     continue;
-                    // }
+                    var (operatorToken, length) = IsOperator(line);
+                    if (operatorToken.HasValue)
+                    {
+                        tokens.Add(new Token(operatorToken.Value, line.Substring(_index, length), _line, _column));
+                        _index += length;
+                        _column += length;
+                        continue;
+                    }
 
                     bool matched = false;
                     matched = RegexIdentifier(line, TokenMathType.KEYWORD);
@@ -88,7 +130,12 @@ namespace MTRAN.LR2
 
                     if (!matched)
                     {
-                        tokens.Add(new Token(PerlToken.ILLEGAL, currentChar.ToString(), _line, _column));
+                        var errorToken = new Token(PerlToken.ILLEGAL, currentChar.ToString(), _line, _column)
+                        {
+                            Id = id++,
+                            Error = $"Unexpected character '{currentChar}' at line {_line}, column {_column}"
+                        };
+                        tokens.Add(errorToken);
                         _index++;
                         _column++;
                     }
@@ -98,38 +145,61 @@ namespace MTRAN.LR2
                 _column = 1;
             }
 
+            while (stack.Count > 0)
+            {
+                var (unclosedChar, line, column) = stack.Pop();
+                var errorToken = new Token(PerlToken.ILLEGAL, unclosedChar.ToString(), line, column)
+                {
+                    Id = id++,
+                    Error = $"Unclosed '{unclosedChar}' at line {line}, column {column}"
+                };
+                tokens.Add(errorToken);
+            }
+
             tokens.Add(new Token(PerlToken.EOF_, "", _line, _column));
             return tokens;
         }
 
-        private PerlToken? IsOperator(string line)
+        private (PerlToken? token, int length) IsOperator(string line)
         {
             switch (line[_index])
             {
                 case '+':
-                    return line[_index + 1] == '=' ? PerlToken.ADD_ASSIGN : PerlToken.ADD;
+                    if (_index + 1 < line.Length && line[_index + 1] == '+')
+                        return (PerlToken.INC, 2);
+                    return (line[_index + 1] == '=' ? PerlToken.ADD_ASSIGN : PerlToken.ADD, line[_index + 1] == '=' ? 2 : 1);
                 case '-':
-                    return line[_index + 1] == '=' ? PerlToken.SUB_ASSIGN : PerlToken.SUB;
+                    if (_index + 1 < line.Length && line[_index + 1] == '-')
+                        return (PerlToken.DEC, 2);
+                    return (line[_index + 1] == '=' ? PerlToken.SUB_ASSIGN : PerlToken.SUB, line[_index + 1] == '=' ? 2 : 1);
                 case '*':
-                    return line[_index + 1] == '=' ? PerlToken.MUL_ASSIGN : PerlToken.MUL;
+                    return (line[_index + 1] == '=' ? PerlToken.MUL_ASSIGN : PerlToken.MUL, line[_index + 1] == '=' ? 2 : 1);
                 case '/':
-                    return line[_index + 1] == '=' ? PerlToken.DIV_ASSIGN : PerlToken.DIV;
+                    return (line[_index + 1] == '=' ? PerlToken.DIV_ASSIGN : PerlToken.DIV, line[_index + 1] == '=' ? 2 : 1);
                 case '!':
-                    return line[_index + 1] == '=' ? PerlToken.NOT_EQUAL : PerlToken.LNOT;
+                    return (line[_index + 1] == '=' ? PerlToken.NOT_EQUAL : PerlToken.LNOT, line[_index + 1] == '=' ? 2 : 1);
                 case '<':
-                    return line[_index + 1] == '=' ? PerlToken.LESS_OR_EQUAL : PerlToken.LESS;
+                    return (line[_index + 1] == '=' ? PerlToken.LESS_OR_EQUAL : PerlToken.LESS, line[_index + 1] == '=' ? 2 : 1);
                 case '>':
-                    return line[_index + 1] == '=' ? PerlToken.GRT_OR_EQUAL : PerlToken.GRT;
+                    return (line[_index + 1] == '=' ? PerlToken.GRT_OR_EQUAL : PerlToken.GRT, line[_index + 1] == '=' ? 2 : 1);
                 case '&':
-                    return line[_index + 1] == '&' ? PerlToken.LAND : PerlToken.BITWISE_AND;
+                    return (line[_index + 1] == '&' ? PerlToken.LAND : PerlToken.BITWISE_AND, line[_index + 1] == '&' ? 2 : 1);
                 case '|':
-                    return line[_index + 1] == '|' ? PerlToken.LOR : PerlToken.BITWISE_OR;
+                    return (line[_index + 1] == '|' ? PerlToken.LOR : PerlToken.BITWISE_OR, line[_index + 1] == '|' ? 2 : 1);
                 case '^':
-                    return PerlToken.BITWISE_XOR;
+                    return (PerlToken.BITWISE_XOR, 1);
                 case '~':
-                    return PerlToken.BITWISE_NOT;
-                default:
-                    return null;
+                    return (PerlToken.BITWISE_NOT, 1);
+                 default:
+                    if (line.Substring(_index).StartsWith("or "))
+                        return (PerlToken.OR, 2);
+                    if (line.Substring(_index).StartsWith("and "))
+                        return (PerlToken.AND, 3);
+                    if (line.Substring(_index).StartsWith("not "))
+                        return (PerlToken.NOT, 3);
+                    if (line.Substring(_index).StartsWith("xor "))
+                        return (PerlToken.XOR, 3);
+                    return (null, 0);
             }
         }
 
@@ -180,8 +250,46 @@ namespace MTRAN.LR2
 
         private Token LexNumber(string line)
         {
-            Console.WriteLine("Pidoras");
             int start = _index;
+
+            if (_index + 1 < line.Length && line[_index] == '0')
+            {
+                char nextChar = line[_index + 1];
+                if (nextChar == 'x' || nextChar == 'X')
+                {
+                    _index += 2;
+                    while (_index < line.Length && Uri.IsHexDigit(line[_index]))
+                        _index++;
+
+                    string hexValue = line.Substring(start, _index - start);
+                    var hexToken = new Token(PerlToken.HEX, hexValue, _line, _column);
+                    _column += hexValue.Length;
+                    return hexToken;
+                }
+                else if (nextChar == 'o' || nextChar == 'O')
+                {
+                    _index += 2;
+                    while (_index < line.Length && line[_index] >= '0' && line[_index] <= '7')
+                        _index++;
+
+                    string octValue = line.Substring(start, _index - start);
+                    var octToken = new Token(PerlToken.OCT, octValue, _line, _column);
+                    _column += octValue.Length;
+                    return octToken;
+                }
+                else if (nextChar == 'b' || nextChar == 'B')
+                {
+                    _index += 2;
+                    while (_index < line.Length && (line[_index] == '0' || line[_index] == '1'))
+                        _index++;
+
+                    string binValue = line.Substring(start, _index - start);
+                    var binToken = new Token(PerlToken.BIN, binValue, _line, _column);
+                    _column += binValue.Length;
+                    return binToken;
+                }
+            }
+
             while (_index < line.Length && (char.IsDigit(line[_index]) || line[_index] == '.'))
                 _index++;
 
@@ -195,10 +303,10 @@ namespace MTRAN.LR2
                     _index++;
             }
 
-            string value = line.Substring(start, _index - start);
-            var token = new Token(PerlToken.NUMBER, value, _line, _column);
-            _column += value.Length;
-            return token;
+            string numberValue = line.Substring(start, _index - start);
+            var numberToken = new Token(PerlToken.NUMBER, numberValue, _line, _column);
+            _column += numberValue.Length;
+            return numberToken;
         }
 
         private Token LexIdentifier(string line)
@@ -209,7 +317,6 @@ namespace MTRAN.LR2
 
             string value = line.Substring(start, _index - start);
 
-            // Check if the value matches any keyword patterns using regex
             foreach (var pattern in _tokenDicnionary.KeywordPatterns)
             {
                 var regex = new Regex(pattern.Value);
@@ -221,13 +328,14 @@ namespace MTRAN.LR2
                 }
             }
 
-            var identifierToken = new Token(PerlToken.VAR, value, _line, _column);
+            var identifierToken = new Token(PerlToken.IDENT, value, _line, _column);
             _column += value.Length;
             return identifierToken;
         }
 
         private bool RegexIdentifier(string line, TokenMathType tokenType)
         {
+            Console.WriteLine("Ты шлюха не моя");
             var patterns = tokenType == TokenMathType.KEYWORD ? _tokenDicnionary.KeywordPatterns : _tokenDicnionary.TokenPatterns;
 
             foreach (var pattern in patterns)
@@ -237,6 +345,7 @@ namespace MTRAN.LR2
 
                 if (match.Success)
                 {
+                    Console.WriteLine(pattern.Key);
                     string value = match.Value;
                     tokens.Add(new Token(pattern.Key, match.Value, _line, _column));
                     _index += match.Length;
@@ -257,5 +366,46 @@ namespace MTRAN.LR2
 
             return false;
         }
+
+       public void SaveModifiedCode(string filePath)
+        {
+            var modifiedCode = new List<string>();
+            var identifierMap = new Dictionary<string, int>();
+
+            foreach (var line in _input.Split('\n'))
+            {
+                var modifiedLine = line;
+                foreach (var token in tokens)
+                {
+                    if (token.TokenType == PerlToken.IDENT)
+                    {
+                        if (!identifierMap.ContainsKey(token.Lexeme))
+                        {
+                            identifierMap[token.Lexeme] = token.Id;
+                        }
+                        modifiedLine = modifiedLine.Replace(token.Lexeme, $"<{identifierMap[token.Lexeme]}>");
+                    }
+                }
+                modifiedCode.Add(modifiedLine);
+            }
+
+            System.IO.File.WriteAllLines(filePath, modifiedCode);
+
+            var errors = tokens.Where(t => !string.IsNullOrEmpty(t.Error)).Select(t => t.Error).ToList();
+            if (errors.Any())
+            {
+                System.IO.File.WriteAllLines("errors.txt", errors);
+            }
+        }
+
+        private bool IsMatchingPair(char open, char close)
+        {
+            return (open == '(' && close == ')') ||
+                (open == '{' && close == '}') ||
+                (open == '[' && close == ']') ||
+                (open == '\'' && close == '\'') ||
+                (open == '"' && close == '"');
+        }
+        
     }
 }
