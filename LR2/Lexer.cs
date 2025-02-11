@@ -78,7 +78,7 @@ namespace MTRAN.LR2
                         {
                             var errorToken = new Token(PerlToken.ILLEGAL, currentChar.ToString(), _line, _column)
                             {
-                                Error = $"Invalid numeric literal at line {_line}, column {_column}"
+                                Error = $"Invalid numeric literal at line {_line}, column {_column}, line {line}"
                             };
                             tokens.Add(errorToken);
                         }
@@ -89,23 +89,26 @@ namespace MTRAN.LR2
                         continue;
                     }
 
-                    // smell code
-
                     if (currentChar == '$' || currentChar == '@' || currentChar == '%')
                     {
                         if (_index + 1 < line.Length && char.IsDigit(line[_index + 1]))
                         {
-                            var errorToken = new Token(PerlToken.ILLEGAL, currentChar.ToString(), _line, _column)
+                            int start = _index;
+                            _index++;
+                            while (_index < line.Length && (char.IsLetterOrDigit(line[_index]) || line[_index] == '_'))
                             {
-                                Error = $"Invalid variable name starting with a digit at line {_line}, column {_column}"
+                                _index++;
+                            }
+                            string invalidVarName = line.Substring(start, _index - start);
+                            var errorToken = new Token(PerlToken.ILLEGAL, invalidVarName, _line, _column)
+                            {
+                                Error = $"Invalid variable name starting with a digit at line {_line}, column {_column}, line: {line}"
                             };
                             tokens.Add(errorToken);
-                            _index++;
-                            _column++;
+                            _column += invalidVarName.Length;
                             continue;
                         }
                     }
-
 
                     if (currentChar == '"')
                     {
@@ -114,7 +117,7 @@ namespace MTRAN.LR2
                         {
                             var errorToken = new Token(PerlToken.ILLEGAL, currentChar.ToString(), _line, _column)
                             {
-                                Error = $"Unclosed string literal at line {_line}, column {_column}"
+                                Error = $"Unclosed string literal at line {_line}, column {_column}, line: {line}"
                             };
                             tokens.Add(errorToken);
                         }
@@ -131,7 +134,7 @@ namespace MTRAN.LR2
                         {
                             var errorToken = new Token(PerlToken.ILLEGAL, currentChar.ToString(), _line, _column)
                             {
-                                Error = $"Invalid variable name starting with a digit at line {_line}, column {_column}"
+                                Error = $"Invalid variable name starting with a digit at line {_line}, column {_column}, line: {line}"
                             };
                             tokens.Add(errorToken);
                             _index++;
@@ -148,7 +151,7 @@ namespace MTRAN.LR2
                     {
                         var errorToken = new Token(PerlToken.ILLEGAL, currentChar.ToString(), _line, _column)
                         {
-                            Error = $"Unsupported character '{currentChar}' at line {_line}, column {_column}"
+                            Error = $"Unsupported character '{currentChar}' at line {_line}, column {_column}, line: {line}"
                         };
                         tokens.Add(errorToken);
                         _index++;
@@ -187,7 +190,7 @@ namespace MTRAN.LR2
                         var errorToken = new Token(PerlToken.ILLEGAL, currentChar.ToString(), _line, _column)
                         {
                             Id = id++,
-                            Error = $"Unexpected character '{currentChar}' at line {_line}, column {_column}"
+                            Error = $"Unexpected character '{currentChar}' at line {_line}, column {_column}, line: {line}"
                         };
                         tokens.Add(errorToken);
                         _index++;
@@ -204,7 +207,7 @@ namespace MTRAN.LR2
                     var errorToken = new Token(PerlToken.ILLEGAL, unclosedChar.ToString(), unclosedLine, unclosedColumn)
                     {
                         Id = id++,
-                        Error = $"Unclosed '{unclosedChar}' at line {unclosedLine}, column {unclosedColumn}"
+                        Error = $"Unclosed '{unclosedChar}' at line {unclosedLine}, column {unclosedColumn}, line: {line}"
                     };
                     tokens.Add(errorToken);
                 }
@@ -244,6 +247,10 @@ namespace MTRAN.LR2
                     return (PerlToken.BITWISE_XOR, 1);
                 case '~':
                     return (PerlToken.BITWISE_NOT, 1);
+                case '=':
+                    if (_index + 1 < line.Length && line[_index + 1] == '>')
+                        return (PerlToken.HASH_ASSIGN, 2);
+                    return (PerlToken.ASSIGN, 1);
                  default:
                     if (line.Substring(_index).StartsWith("or "))
                         return (PerlToken.OR, 2);
@@ -305,6 +312,7 @@ namespace MTRAN.LR2
         private Token LexNumber(string line)
         {
             int start = _index;
+            int decimalPointCount = 0;
 
             if (_index + 1 < line.Length && line[_index] == '0')
             {
@@ -345,7 +353,27 @@ namespace MTRAN.LR2
             }
 
             while (_index < line.Length && (char.IsDigit(line[_index]) || line[_index] == '.'))
+            {
+                if (line[_index] == '.')
+                {
+                    decimalPointCount++;
+                    if (decimalPointCount > 1)
+                    {
+                        while (_index < line.Length && (char.IsDigit(line[_index]) || line[_index] == '.'))
+                        {
+                            _index++;
+                        }
+                        string invalidNumber = line.Substring(start, _index - start);
+                        var errorToken = new Token(PerlToken.ILLEGAL, invalidNumber, _line, _column)
+                        {
+                            Error = $"Invalid numeric literal with multiple decimal points at line {_line}, column {_column}, line: {line}"
+                        };
+                        _column += invalidNumber.Length;
+                        return errorToken;
+                    }
+                }
                 _index++;
+            }
 
             if (_index < line.Length && (line[_index] == 'e' || line[_index] == 'E'))
             {
@@ -453,25 +481,33 @@ namespace MTRAN.LR2
 
         private bool IsSupportedCharacter(char c)
         {
-            return c >= 32 && c <= 126; // Example: Allow only printable ASCII characters
+            return c >= 32 && c <= 126;
         }
 
         private Token LexString(string line)
         {
             int start = _index;
+            char quoteType = line[_index];
             _index++;
 
-            while (_index < line.Length && line[_index] != '"')
+            while (_index < line.Length && line[_index] != quoteType)
             {
                 _index++;
             }
 
-            if (_index >= line.Length || line[_index] != '"')
+            if (_index >= line.Length || line[_index] != quoteType)
             {
-                return null;
+                string unclosedString = line.Substring(start);
+                var errorToken = new Token(PerlToken.ILLEGAL, unclosedString, _line, _column)
+                {
+                    Error = $"Unclosed string literal at line {_line}, column {_column}, line: {line}"
+                };
+                _index++;
+                _column += unclosedString.Length;
+                return errorToken;
             }
 
-            _index++;
+            _index++; // Skip the closing quote
             string value = line.Substring(start, _index - start);
             var stringToken = new Token(PerlToken.STRING, value, _line, _column);
             _column += value.Length;
