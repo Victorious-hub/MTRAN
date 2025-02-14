@@ -1,4 +1,4 @@
-Invalid variable name starting with a digit at line 40, column 4, line: my $1var = "test";
-Invalid numeric literal with multiple decimal points at line 42, column 7, line: print 1.232.3.1 ;
-Unsupported character '¥' at line 43, column 15, line: my $var = 100 ¥ 20;
-Unclosed string literal at line 45, column 7, line: print "w
+Invalid variable name starting with a digit at line 38, column 4, line: my $1var = "test";
+Invalid numeric literal with multiple decimal points at line 40, column 7, line: print 1.232.3.1 ;
+Unsupported character '¥' at line 41, column 15, line: my $var = 100 ¥ 20;
+Unclosed string literal at line 43, column 7, line: print "w

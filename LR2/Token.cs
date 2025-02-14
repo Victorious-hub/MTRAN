@@ -122,7 +122,7 @@ namespace MTRAN.LR2
         public readonly Dictionary<PerlToken, string> TokenPatterns = new()
         {
             
-            { PerlToken.COMMENT, @"#.*" },                      // comment (single line)
+            // { PerlToken.COMMENT, @"#.*" },                      // comment (single line)
             
             /* Special tokens */
             { PerlToken.IDENT, @"[\$@%][a-zA-Z_]\w*" },                // variable (e.g., $a, $var_name)
