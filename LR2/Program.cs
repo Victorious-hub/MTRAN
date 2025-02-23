@@ -26,7 +26,7 @@ class PerlTokenizer
 
                 var lexer = new PerlLexer(fileContent);
                 var tokens = lexer.Tokenize();
-                lexer.PrintTokens();
+                lexer.PrintUniqueTokens();
 
                 lexer.SaveModifiedCode("modified_variables.pl");
 

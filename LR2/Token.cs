@@ -129,7 +129,7 @@ namespace MTRAN.LR2
 
             { PerlToken.EQUAL, @"==" },                         // equality (e.g., ==)
             { PerlToken.ASSIGN, @"=" },                         // assignment (e.g., =)
-            // { PerlToken.INT, @"\b[0-9]+\b" },                      // integer (e.g., 123)
+            { PerlToken.INT, @"\b[0-9]+\b" },                      // integer (e.g., 123)
             { PerlToken.STRING, @"(['""])(?:(?=(\\?))\2.)*?\1" },            // string (e.g., 'abc')
             { PerlToken.NUMBER, @"\b\d+(\.\d+)?([eE][-+]?\d+)?\b" }, // float (e.g., 123.45, 1e+300)
             { PerlToken.HEX, @"\b0[xX][0-9a-fA-F]+\b" }, // hexadecimal (e.g., 0x1A3F)

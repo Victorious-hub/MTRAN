@@ -12,6 +12,7 @@ namespace MTRAN.LR2
 
     public class PerlLexer
     {
+        public Dictionary<string, List<(PerlToken token, int line, int column, int id)>> outputTokens = new Dictionary<string, List<(PerlToken token, int line, int column, int id)>>();
         public TokenDictionary _tokenDicnionary = new TokenDictionary();
         public List<Token> tokens = new List<Token>();
         public Dictionary<MTRAN.LR2.PerlToken, List<(int line, int column)>> tokenBuffer = new Dictionary<MTRAN.LR2.PerlToken, List<(int line, int column)>>();
@@ -117,163 +118,342 @@ namespace MTRAN.LR2
             }
         }
 
-        public List<Token> Tokenize()
+        public void PrintUniqueTokens()
         {
-            var lines = _input.Split('\n');
-            int id = 0;
-            foreach (var line in lines)
+            var identifiers = new List<(string lexeme, int line, int column, int id)>();
+            var constants = new List<(string lexeme, int line, int column, int id, string type)>();
+            var delimiters = new List<(string lexeme, int line, int column, int id)>();
+            var operators = new List<(string lexeme, int line, int column, int id)>();
+            var keywords = new List<(string lexeme, int line, int column, int id)>();
+
+            foreach (var kvp in outputTokens)
             {
-                _index = 0;
-                while (_index < line.Length)
+                var tokenType = kvp.Key;
+                var tokenDataList = kvp.Value;
+
+                foreach (var tokenData in tokenDataList)
                 {
-                    var currentChar = line[_index];
-                    
-                    if (char.IsWhiteSpace(currentChar))
+                    if (tokenData.token == PerlToken.ILLEGAL)
                     {
-                        HandleWhitespace(line);
                         continue;
                     }
 
-                    var (operatorToken, length) = IsOperator(line);
-                    if (operatorToken.HasValue)
+                    switch (tokenData.token)
                     {
-                        tokens.Add(new Token(operatorToken.Value, line.Substring(_index, length), _line, _column) { Id = id++ });
-                        _index += length;
-                        _column += length;
-                        continue;
-                    }
-
-                    if (char.IsDigit(currentChar) || (currentChar == '0' && _index + 1 < line.Length && 
-                        (line[_index + 1] == 'x' || line[_index + 1] == 'X' || 
-                        line[_index + 1] == 'o' || line[_index + 1] == 'O' || 
-                        line[_index + 1] == 'b' || line[_index + 1] == 'B')))
-                    {
-                        var numberToken = LexNumber(line);
-                        numberToken.Id = id++;
-                        tokens.Add(numberToken);
-                        continue;
-                    }
-
-                    if (currentChar == '$' || currentChar == '@' || currentChar == '%')
-                    {
-                        if (_index + 1 < line.Length && char.IsDigit(line[_index + 1]))
-                        {
-                            int start = _index;
-                            _index++;
-                            while (_index < line.Length && (char.IsLetterOrDigit(line[_index]) || line[_index] == '_'))
+                        case PerlToken.IDENT:
+                            identifiers.Add((tokenType, tokenData.line, tokenData.column, tokenData.id));
+                            break;
+                        case PerlToken.INT:
+                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, "int"));
+                            break;
+                        case PerlToken.NUMBER:
+                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, "float"));
+                            break;
+                        case PerlToken.STRING:
+                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, "string"));
+                            break;
+                        case PerlToken.HEX:
+                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, "hex"));
+                            break;
+                        case PerlToken.OCT:
+                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, "oct"));
+                            break;
+                        case PerlToken.BIN:
+                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, "bin"));
+                            break;
+                        case PerlToken.COMMA:
+                        case PerlToken.SEMICOLON:
+                        case PerlToken.DOT:
+                        case PerlToken.LPAREN:
+                        case PerlToken.RPAREN:
+                        case PerlToken.LBRACE:
+                        case PerlToken.RBRACE:
+                        case PerlToken.LBRACKET:
+                        case PerlToken.RBRACKET:
+                        case PerlToken.COLON:
+                            delimiters.Add((tokenType, tokenData.line, tokenData.column, tokenData.id));
+                            break;
+                        case PerlToken.ADD:
+                        case PerlToken.SUB:
+                        case PerlToken.MUL:
+                        case PerlToken.DIV:
+                        case PerlToken.ASSIGN:
+                        case PerlToken.ADD_ASSIGN:
+                        case PerlToken.SUB_ASSIGN:
+                        case PerlToken.MUL_ASSIGN:
+                        case PerlToken.DIV_ASSIGN:
+                        case PerlToken.INC:
+                        case PerlToken.DEC:
+                        case PerlToken.LAND:
+                        case PerlToken.LOR:
+                        case PerlToken.LNOT:
+                        case PerlToken.BITWISE_AND:
+                        case PerlToken.BITWISE_OR:
+                        case PerlToken.BITWISE_XOR:
+                        case PerlToken.BITWISE_NOT:
+                        case PerlToken.LESS:
+                        case PerlToken.LESS_OR_EQUAL:
+                        case PerlToken.GRT:
+                        case PerlToken.GRT_OR_EQUAL:
+                        case PerlToken.NOT_EQUAL:
+                        case PerlToken.HASH_ASSIGN:
+                            operators.Add((tokenType, tokenData.line, tokenData.column, tokenData.id));
+                            break;
+                        default:
+                            if (_tokenDicnionary.KeywordPatterns.ContainsKey(tokenData.token))
                             {
-                                _index++;
+                                keywords.Add((tokenType, tokenData.line, tokenData.column, tokenData.id));
                             }
-                            string invalidVarName = line.Substring(start, _index - start);
-                            var errorToken = new Token(PerlToken.ILLEGAL, invalidVarName, _line, _column)
-                            {
-                                Id = id++,
-                                Error = $"Invalid variable name starting with a digit at line {_line}, column {_column}, line: {line}"
-                            };
-                            tokens.Add(errorToken);
-                            _column += invalidVarName.Length;
-                            continue;
-                        }
+                            break;
                     }
-
-                    if (currentChar == '"')
-                    {
-                        var stringToken = LexString(line);
-                        stringToken.Id = id++;
-                        tokens.Add(stringToken);
-                        continue;
-                    }
-
-                    if (char.IsLetter(currentChar) || currentChar == '_')
-                    {
-                        if (char.IsDigit(line[_index]))
-                        {
-                            var errorToken = new Token(PerlToken.ILLEGAL, currentChar.ToString(), _line, _column)
-                            {
-                                Id = id++,
-                                Error = $"Invalid variable name starting with a digit at line {_line}, column {_column}, line: {line}"
-                            };
-                            tokens.Add(errorToken);
-                            _index++;
-                            _column++;
-                            continue;
-                        }
-
-                        var identifierToken = LexIdentifier(line);
-                        identifierToken.Id = id++;
-                        tokens.Add(identifierToken);
-                        continue;
-                    }
-
-                    if (!IsSupportedCharacter(currentChar))
-                    {
-                        var errorToken = new Token(PerlToken.ILLEGAL, currentChar.ToString(), _line, _column)
-                        {
-                            Id = id++,
-                            Error = $"Unsupported character '{currentChar}' at line {_line}, column {_column}, line: {line}"
-                        };
-                        tokens.Add(errorToken);
-                        _index++;
-                        _column++;
-                        continue;
-                    }
-
-                    var punctuationToken = IsPunctuation(currentChar);
-                    if (punctuationToken.HasValue)
-                    {
-                        tokens.Add(new Token(punctuationToken.Value, currentChar.ToString(), _line, _column) { Id = id++ });
-                        _index++;
-                        _column++;
-                        continue;
-                    }
-
-                    bool matched = false;
-                    matched = RegexIdentifier(line, TokenMathType.KEYWORD, ref id);
-
-                    if (!matched && (char.IsLetter(currentChar)))
-                    {
-                        var identifierToken = LexIdentifier(line);
-                        identifierToken.Id = id;
-                        tokens.Add(identifierToken);
-                        matched = true;
-                    }
-
-                    if (!matched)
-                    {
-                        matched = RegexIdentifier(line, TokenMathType.TOKEN, ref id);
-                    }
-
-                    if (!matched)
-                    {
-                        var errorToken = new Token(PerlToken.ILLEGAL, currentChar.ToString(), _line, _column)
-                        {
-                            Id = id++,
-                            Error = $"Unexpected character '{currentChar}' at line {_line}, column {_column}, line: {line}"
-                        };
-                        tokens.Add(errorToken);
-                        _index++;
-                        _column++;
-                    }
-                }
-
-                _line++;
-                _column = 1;
-
-                while (stack.Count > 0)
-                {
-                    var (unclosedChar, unclosedLine, unclosedColumn) = stack.Pop();
-                    var errorToken = new Token(PerlToken.ILLEGAL, unclosedChar.ToString(), unclosedLine, unclosedColumn)
-                    {
-                        Id = id++,
-                        Error = $"Unclosed '{unclosedChar}' at line {unclosedLine}, column {unclosedColumn}, line: {line}"
-                    };
-                    tokens.Add(errorToken);
                 }
             }
 
-            tokens.Add(new Token(PerlToken.EOF_, "", _line, _column) { Id = id++ });
-            return tokens;
+            Console.WriteLine("{0,-5} {1,-15} {2,-15} {3,-10} {4,-10} {5,-10}", "ID", "Token Type", "Lexeme", "Line", "Column", "Type");
+            Console.WriteLine(new string('-', 70));
+
+            PrintUniqueCategory("Identifiers", identifiers);
+            PrintUniqueCategory("Constants", constants);
+            PrintUniqueCategory("Delimiters", delimiters);
+            PrintUniqueCategory("Operators", operators);
+            PrintUniqueCategory("Keywords", keywords);
         }
+
+        private void PrintUniqueCategory(string category, List<(string lexeme, int line, int column, int id)> tokens)
+        {
+            Console.WriteLine($"\n{category}:");
+            foreach (var token in tokens)
+            {
+                Console.WriteLine("{0,-5} {1,-15} {2,-15} {3,-10} {4,-10}", token.id, category, token.lexeme, token.line, token.column);
+            }
+        }
+
+        private void PrintUniqueCategory(string category, List<(string lexeme, int line, int column, int id, string type)> tokens)
+        {
+            Console.WriteLine($"\n{category}:");
+            foreach (var token in tokens)
+            {
+                Console.WriteLine("{0,-5} {1,-15} {2,-15} {3,-10} {4,-10} {5,-10}", token.id, category, token.lexeme, token.line, token.column, token.type);
+            }
+        }
+
+    public List<Token> Tokenize()
+    {
+        var lines = _input.Split('\n');
+        int id = 0;
+        bool inPodComment = false;
+
+        foreach (var line in lines)
+        {
+            _index = 0;
+            while (_index < line.Length)
+            {
+                var currentChar = line[_index];
+
+                // Handle long comments
+                if (line.Substring(_index).StartsWith("=pod"))
+                {
+                    inPodComment = true;
+                    break; // Skip the rest of the line
+                }
+
+                if (inPodComment)
+                {
+                    if (line.Substring(_index).StartsWith("=cut"))
+                    {
+                        inPodComment = false;
+                    }
+                    break; // Skip the rest of the line
+                }
+
+                // Skip comments
+                if (currentChar == '#')
+                {
+                    break; // Skip the rest of the line
+                }
+
+                if (char.IsWhiteSpace(currentChar))
+                {
+                    HandleWhitespace(line);
+                    continue;
+                }
+
+                var (operatorToken, length) = IsOperator(line);
+                if (operatorToken.HasValue)
+                {
+                    tokens.Add(new Token(operatorToken.Value, line.Substring(_index, length), _line, _column) { Id = id++ });
+                    if (!outputTokens.ContainsKey(line.Substring(_index, length)))
+                    {
+                        outputTokens.Add(line.Substring(_index, length), new List<(PerlToken, int, int, int)> { (operatorToken.Value, _line, _column, id) });
+                    }
+                    _index += length;
+                    _column += length;
+                    continue;
+                }
+
+                if (char.IsDigit(currentChar) || (currentChar == '0' && _index + 1 < line.Length && 
+                    (line[_index + 1] == 'x' || line[_index + 1] == 'X' || 
+                    line[_index + 1] == 'o' || line[_index + 1] == 'O' || 
+                    line[_index + 1] == 'b' || line[_index + 1] == 'B')))
+                {
+                    var numberToken = LexNumber(line);
+                    numberToken.Id = id++;
+                    tokens.Add(numberToken);
+                    if (!outputTokens.ContainsKey(numberToken.Lexeme))
+                    {
+                        outputTokens.Add(numberToken.Lexeme, new List<(PerlToken, int, int, int)> { (numberToken.TokenType, _line, _column, id) });
+                    }
+                    continue;
+                }
+
+                if (currentChar == '$' || currentChar == '@' || currentChar == '%')
+                {
+                    int start = _index;
+                    _index++;
+                    if (_index < line.Length && char.IsDigit(line[_index]))
+                    {
+                        // Variable starts with a number, mark as ILLEGAL
+                        while (_index < line.Length && (char.IsLetterOrDigit(line[_index]) || line[_index] == '_'))
+                        {
+                            _index++;
+                        }
+                        string invalidIdentifier = line.Substring(start, _index - start);
+                        var errorToken = new Token(PerlToken.ILLEGAL, invalidIdentifier, _line, _column)
+                        {
+                            Id = id++,
+                            Error = $"Invalid identifier starting with a number at line {_line}, column {_column}, line: {line}"
+                        };
+                        tokens.Add(errorToken);
+                        _column += invalidIdentifier.Length;
+                        continue;
+                    }
+                    while (_index < line.Length && (char.IsLetterOrDigit(line[_index]) || line[_index] == '_'))
+                    {
+                        _index++;
+                    }
+                    string identifier = line.Substring(start, _index - start);
+                    var identifierToken = new Token(PerlToken.IDENT, identifier, _line, _column) { Id = id++ };
+                    tokens.Add(identifierToken);
+                    if (!outputTokens.ContainsKey(identifier))
+                    {
+                        outputTokens.Add(identifier, new List<(PerlToken, int, int, int)> { (identifierToken.TokenType, _line, _column, id) });
+                    }
+                    _column += identifier.Length;
+                    continue;
+                }
+
+                if (currentChar == '"')
+                {
+                    var stringToken = LexString(line);
+                    stringToken.Id = id++;
+                    tokens.Add(stringToken);
+                    if (!outputTokens.ContainsKey(stringToken.Lexeme))
+                    {
+                        outputTokens.Add(stringToken.Lexeme, new List<(PerlToken, int, int, int)> { (stringToken.TokenType, _line, _column, id) });
+                    }
+                    continue;
+                }
+
+                if (char.IsLetter(currentChar) || currentChar == '_')
+                {
+                    var identifierToken = LexIdentifier(line);
+                    identifierToken.Id = id++;
+                    tokens.Add(identifierToken);
+                    if (!outputTokens.ContainsKey(identifierToken.Lexeme))
+                    {
+                        outputTokens.Add(identifierToken.Lexeme, new List<(PerlToken, int, int, int)> { (identifierToken.TokenType, _line, _column, id) });
+                    }
+                    continue;
+                }
+
+                if (!IsSupportedCharacter(currentChar))
+                {
+                    var errorToken = new Token(PerlToken.ILLEGAL, currentChar.ToString(), _line, _column)
+                    {
+                        Id = id++,
+                        Error = $"Unsupported character '{currentChar}' at line {_line}, column {_column}, line: {line}"
+                    };
+                    tokens.Add(errorToken);
+                    _index++;
+                    _column++;
+                    continue;
+                }
+
+                var punctuationToken = IsPunctuation(currentChar);
+                if (punctuationToken.HasValue)
+                {
+                    tokens.Add(new Token(punctuationToken.Value, currentChar.ToString(), _line, _column) { Id = id++ });
+                    if (!outputTokens.ContainsKey(currentChar.ToString()))
+                    {
+                        outputTokens.Add(currentChar.ToString(), new List<(PerlToken, int, int, int)> { (punctuationToken.Value, _line, _column, id) });
+                    }
+                    _index++;
+                    _column++;
+                    continue;
+                }
+
+                bool matched = false;
+                matched = RegexIdentifier(line, TokenMathType.KEYWORD, ref id);
+
+                if (!matched && (char.IsLetter(currentChar)))
+                {
+                    var identifierToken = LexIdentifier(line);
+                    identifierToken.Id = id++;
+                    tokens.Add(identifierToken);
+                    if (!outputTokens.ContainsKey(identifierToken.Lexeme))
+                    {
+                        outputTokens.Add(identifierToken.Lexeme, new List<(PerlToken, int, int, int)> { (identifierToken.TokenType, _line, _column, id) });
+                    }
+                    matched = true;
+                }
+
+                if (!matched)
+                {
+                    matched = RegexIdentifier(line, TokenMathType.TOKEN, ref id);
+                }
+
+                if (!matched)
+                {
+                    var errorToken = new Token(PerlToken.ILLEGAL, currentChar.ToString(), _line, _column)
+                    {
+                        Id = id++,
+                        Error = $"Unexpected character '{currentChar}' at line {_line}, column {_column}, line: {line}"
+                    };
+                    tokens.Add(errorToken);
+                    _index++;
+                    _column++;
+                }
+            }
+
+            _line++;
+            _column = 1;
+
+            while (stack.Count > 0)
+            {
+                var (unclosedChar, unclosedLine, unclosedColumn) = stack.Pop();
+                var errorToken = new Token(PerlToken.ILLEGAL, unclosedChar.ToString(), unclosedLine, unclosedColumn)
+                {
+                    Id = id++,
+                    Error = $"Unclosed '{unclosedChar}' at line {unclosedLine}, column {unclosedColumn}, line: {line}"
+                };
+                tokens.Add(errorToken);
+            }
+        }
+
+        if (inPodComment)
+        {
+            var errorToken = new Token(PerlToken.ILLEGAL, "=pod", _line, _column)
+            {
+                Id = id++,
+                Error = $"Unclosed pod comment starting at line {_line}"
+            };
+            tokens.Add(errorToken);
+        }
+
+        tokens.Add(new Token(PerlToken.EOF_, "", _line, _column) { Id = id++ });
+        outputTokens.Add("", new List<(PerlToken, int, int, int)> { (PerlToken.EOF_, _line, _column, id) });
+        return tokens;
+    }
 
         private (PerlToken? token, int length) IsOperator(string line)
         {
@@ -444,7 +624,7 @@ namespace MTRAN.LR2
             }
 
             string numberValue = line.Substring(start, _index - start);
-            var numberToken = new Token(PerlToken.NUMBER, numberValue, _line, _column);
+            var numberToken = new Token(decimalPointCount > 0 ? PerlToken.NUMBER : PerlToken.INT, numberValue, _line, _column);
             _column += numberValue.Length;
             return numberToken;
         }
