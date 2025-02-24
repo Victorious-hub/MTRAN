@@ -200,11 +200,11 @@ namespace MTRAN.LR2
 
         public void PrintUniqueTokens()
         {
-            var identifiers = new List<(string lexeme, int line, int column, int id, string description)>();
-            var constants = new List<(string lexeme, int line, int column, int id, string description)>();
-            var delimiters = new List<(string lexeme, int line, int column, int id, string description)>();
-            var operators = new List<(string lexeme, int line, int column, int id, string description)>();
-            var keywords = new List<(string lexeme, int line, int column, int id, string description)>();
+            var identifiers = new List<(string lexeme, int line, int column, int id, string description, PerlToken token)>();
+            var constants = new List<(string lexeme, int line, int column, int id, string description, PerlToken token)>();
+            var delimiters = new List<(string lexeme, int line, int column, int id, string description, PerlToken token)>();
+            var operators = new List<(string lexeme, int line, int column, int id, string description, PerlToken token)>();
+            var keywords = new List<(string lexeme, int line, int column, int id, string description, PerlToken token)>();
 
             foreach (var kvp in outputTokens)
             {
@@ -223,25 +223,25 @@ namespace MTRAN.LR2
                     switch (tokenData.token)
                     {
                         case PerlToken.IDENT:
-                            identifiers.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description));
+                            identifiers.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description, tokenData.token));
                             break;
                         case PerlToken.INT:
-                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description));
+                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description, tokenData.token));
                             break;
                         case PerlToken.NUMBER:
-                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description));
+                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description, tokenData.token));
                             break;
                         case PerlToken.STRING:
-                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description));
+                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description, tokenData.token));
                             break;
                         case PerlToken.HEX:
-                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description));
+                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description, tokenData.token));
                             break;
                         case PerlToken.OCT:
-                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description));
+                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description, tokenData.token));
                             break;
                         case PerlToken.BIN:
-                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description));
+                            constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description, tokenData.token));
                             break;
                         case PerlToken.COMMA:
                         case PerlToken.SEMICOLON:
@@ -253,7 +253,7 @@ namespace MTRAN.LR2
                         case PerlToken.LBRACKET:
                         case PerlToken.RBRACKET:
                         case PerlToken.COLON:
-                            delimiters.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description));
+                            delimiters.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description, tokenData.token));
                             break;
                         case PerlToken.ADD:
                         case PerlToken.SUB:
@@ -279,20 +279,20 @@ namespace MTRAN.LR2
                         case PerlToken.GRT_OR_EQUAL:
                         case PerlToken.NOT_EQUAL:
                         case PerlToken.HASH_ASSIGN:
-                            operators.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description));
+                            operators.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description, tokenData.token));
                             break;
                         default:
                             if (_tokenDicnionary.KeywordPatterns.ContainsKey(tokenData.token))
                             {
-                                keywords.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description));
+                                keywords.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description, tokenData.token));
                             }
                             break;
                     }
                 }
             }
 
-            Console.WriteLine("{0,-5} {1,-15} {2,-15} {3,-10} {4,-10} {5,-15}", "ID", "Token Type", "Lexeme", "Line", "Column", "Description");
-            Console.WriteLine(new string('-', 80));
+            Console.WriteLine("{0,-5} {1,-15} {2,-15} {3,-10} {4,-10} {5,-15} {6,-10}", "ID", "Token Type", "Lexeme", "Line", "Column", "Description", "Token");
+            Console.WriteLine(new string('-', 90));
 
             PrintCategory("Identifiers", identifiers);
             PrintCategory("Constants", constants);
@@ -301,21 +301,21 @@ namespace MTRAN.LR2
             PrintCategory("Keywords", keywords);
         }
 
-        private void PrintCategory(string category, List<(string lexeme, int line, int column, int id, string description)> tokens)
+        private void PrintCategory(string category, List<(string lexeme, int line, int column, int id, string description, PerlToken token)> tokens)
         {
             Console.WriteLine($"\n{category}:");
             foreach (var token in tokens)
             {
-                Console.WriteLine("{0,-5} {1,-15} {2,-15} {3,-10} {4,-10} {5,-15}", token.id, category, token.lexeme, token.line, token.column, token.description);
+                Console.WriteLine("{0,-5} {1,-15} {2,-15} {3,-10} {4,-10} {5,-15} {6,-10}", token.id, category, token.lexeme, token.line, token.column, token.description, token.token);
             }
         }
 
-        private void PrintCategory(string category, List<(string lexeme, int line, int column, int id, string type, string description)> tokens)
+        private void PrintCategory(string category, List<(string lexeme, int line, int column, int id, string type, string description, PerlToken token)> tokens)
         {
             Console.WriteLine($"\n{category}:");
             foreach (var token in tokens)
             {
-                Console.WriteLine("{0,-5} {1,-15} {2,-15} {3,-10} {4,-10} {5,-10} {6,-15}", token.id, category, token.lexeme, token.line, token.column, token.type, token.description);
+                Console.WriteLine("{0,-5} {1,-15} {2,-15} {3,-10} {4,-10} {5,-10} {6,-15} {7,-10}", token.id, category, token.lexeme, token.line, token.column, token.type, token.description, token.token);
             }
         }
 
@@ -635,6 +635,7 @@ namespace MTRAN.LR2
         {
             int start = _index;
             int decimalPointCount = 0;
+            bool isExponent = false;
 
             if (_index + 1 < line.Length && line[_index] == '0')
             {
@@ -646,7 +647,7 @@ namespace MTRAN.LR2
                         _index++;
 
                     string hexValue = line.Substring(start, _index - start);
-                    var hexToken = new Token(PerlToken.HEX, hexValue, _line, _column);
+                    var hexToken = new Token(PerlToken.HEX, hexValue, _line, _column, "Hexadecimal");
                     _column += hexValue.Length;
                     return hexToken;
                 }
@@ -657,7 +658,7 @@ namespace MTRAN.LR2
                         _index++;
 
                     string octValue = line.Substring(start, _index - start);
-                    var octToken = new Token(PerlToken.OCT, octValue, _line, _column);
+                    var octToken = new Token(PerlToken.OCT, octValue, _line, _column, "Octal");
                     _column += octValue.Length;
                     return octToken;
                 }
@@ -668,7 +669,7 @@ namespace MTRAN.LR2
                         _index++;
 
                     string binValue = line.Substring(start, _index - start);
-                    var binToken = new Token(PerlToken.BIN, binValue, _line, _column);
+                    var binToken = new Token(PerlToken.BIN, binValue, _line, _column, "Binary");
                     _column += binValue.Length;
                     return binToken;
                 }
@@ -686,7 +687,7 @@ namespace MTRAN.LR2
                             _index++;
                         }
                         string invalidNumber = line.Substring(start, _index - start);
-                        var errorToken = new Token(PerlToken.ILLEGAL, invalidNumber, _line, _column)
+                        var errorToken = new Token(PerlToken.ILLEGAL, invalidNumber, _line, _column, "Invalid numeric literal")
                         {
                             Error = $"Invalid numeric literal with multiple decimal points at line {_line}, column {_column}, line: {line}"
                         };
@@ -699,6 +700,7 @@ namespace MTRAN.LR2
 
             if (_index < line.Length && (line[_index] == 'e' || line[_index] == 'E'))
             {
+                isExponent = true;
                 _index++;
                 if (_index < line.Length && (line[_index] == '+' || line[_index] == '-'))
                     _index++;
@@ -708,7 +710,7 @@ namespace MTRAN.LR2
             }
 
             string numberValue = line.Substring(start, _index - start);
-            var numberToken = new Token(decimalPointCount > 0 ? PerlToken.NUMBER : PerlToken.INT, numberValue, _line, _column);
+            var numberToken = new Token(decimalPointCount > 0 || isExponent ? PerlToken.NUMBER : PerlToken.INT, numberValue, _line, _column, decimalPointCount > 0 || isExponent ? "Number" : "Integer");
             _column += numberValue.Length;
             return numberToken;
         }
