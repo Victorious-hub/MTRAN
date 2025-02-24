@@ -198,26 +198,28 @@ namespace MTRAN.LR2
 
             { PerlToken.EOF_, @"\z" },                          // end of string
         };
-        
+
     }
 
-    
+
     public class Token {
-        public PerlToken TokenType {get; set;}
-        public string Lexeme {get; set;} = string.Empty;
+        public PerlToken TokenType { get; set; }
+        public string Lexeme { get; set; } = string.Empty;
         public int Line { get; set; }
         public int Column { get; set; }
-        public int Id {get; set;} = 0;
+        public int Id { get; set; } = 0;
         public string Error { get; set; } = string.Empty;
-        
-        public Token(){}
+        public string Description { get; set; } = string.Empty; // Add description property
 
-        public Token(PerlToken tokenType, string lex, int line, int column)
+        public Token() { }
+
+        public Token(PerlToken tokenType, string lex, int line, int column, string description = "")
         {
-            this.TokenType = tokenType;  // Use the lowercase property name
-            this.Lexeme = lex;              // Use the lowercase property name
+            this.TokenType = tokenType;
+            this.Lexeme = lex;
             this.Line = line;
             this.Column = column;
+            this.Description = description; // Initialize description
         }
     }
 
