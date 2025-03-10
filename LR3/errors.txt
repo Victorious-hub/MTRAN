@@ -1,0 +1,4 @@
+Invalid identifier starting with a number at line 49, column 4, line: my $1var = "test";
+Invalid numeric literal with multiple decimal points at line 51, column 7, line: print 1.232.3.1 ;
+Unsupported character '¥' at line 52, column 19, line: my <144> = 0xFA43 ¥ 5;
+Unclosed string literal at line 54, column 7, line: print "w
