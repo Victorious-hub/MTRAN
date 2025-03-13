@@ -158,6 +158,18 @@ namespace MTRAN.LR3
         }
     }
 
+    public class UnaryOperationNode : ASTNode
+    {
+        public string Variable { get; }
+        public string Operator { get; }
+
+        public UnaryOperationNode(string variable, string op)
+        {
+            Variable = variable;
+            Operator = op;
+        }
+    }
+
     public class ForeachNode : ASTNode
     {
         public string Variable { get; }

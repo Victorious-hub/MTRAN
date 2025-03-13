@@ -202,7 +202,15 @@ namespace MTRAN.LR3
                 }
                 else if (_currentToken.TokenType != PerlToken.RBRACE && _currentToken.TokenType != PerlToken.EOF_)
                 {
-                    throw new Exception("Unexpected token after statement");
+                    // Allow certain tokens to be present after a statement
+                    if (_currentToken.TokenType == PerlToken.MY || _currentToken.TokenType == PerlToken.IF || 
+                        _currentToken.TokenType == PerlToken.FOR || _currentToken.TokenType == PerlToken.FOREACH || 
+                        _currentToken.TokenType == PerlToken.WHILE || _currentToken.TokenType == PerlToken.ELSIF || 
+                        _currentToken.TokenType == PerlToken.ELSE)
+                    {
+                        continue;
+                    }
+                    // throw new Exception("Unexpected token after statement");
                 }
             }
 
@@ -215,9 +223,25 @@ namespace MTRAN.LR3
             {
                 return IfStatement();
             }
-            else
+            else if (_currentToken.TokenType == PerlToken.FOR)
+            {
+                return ForStatement();
+            }
+            else if (_currentToken.TokenType == PerlToken.FOREACH)
+            {
+                return ForeachStatement();
+            }
+            else if (_currentToken.TokenType == PerlToken.WHILE)
+            {
+                return WhileStatement();
+            }
+            else if (_currentToken.TokenType == PerlToken.MY)
             {
                 return Assignment();
+            }
+            else
+            {
+                return Expr();
             }
         }
 
@@ -242,15 +266,33 @@ namespace MTRAN.LR3
             {
                 Token variableToken = _currentToken;
                 Eat(PerlToken.IDENT);
-                Eat(PerlToken.ASSIGN);
-                ASTNode value = Expr();
-                if (isDeclaration)
+
+                if (_currentToken.TokenType == PerlToken.ASSIGN)
                 {
-                    return new VariableDeclarationNode(keyword, variableToken.Lexeme, value);
+                    Eat(PerlToken.ASSIGN);
+                    ASTNode value = Expr();
+                    if (isDeclaration)
+                    {
+                        return new VariableDeclarationNode(keyword, variableToken.Lexeme, value);
+                    }
+                    else
+                    {
+                        return new AssignmentNode(variableToken.Lexeme, value);
+                    }
+                }
+                else if (_currentToken.TokenType == PerlToken.INC)
+                {
+                    Eat(PerlToken.INC);
+                    return new UnaryOperationNode(variableToken.Lexeme, "++");
+                }
+                else if (_currentToken.TokenType == PerlToken.DEC)
+                {
+                    Eat(PerlToken.DEC);
+                    return new UnaryOperationNode(variableToken.Lexeme, "--");
                 }
                 else
                 {
-                    return new AssignmentNode(variableToken.Lexeme, value);
+                    throw new Exception($"Expected token ASSIGN, INC, or DEC, got {_currentToken.TokenType}");
                 }
             }
             else
@@ -258,7 +300,71 @@ namespace MTRAN.LR3
                 return null;
             }
         }
-    }
 
-    
+        private ASTNode ForStatement()
+        {
+            Eat(PerlToken.FOR);
+            Eat(PerlToken.LPAREN);
+            ASTNode initialization = Assignment();
+            Eat(PerlToken.SEMICOLON);
+            ASTNode condition = Expr();
+            Eat(PerlToken.SEMICOLON);
+            ASTNode increment = Assignment();
+            Eat(PerlToken.RPAREN);
+            Eat(PerlToken.LBRACE);
+            ASTNode body = ParseBlock();
+            Eat(PerlToken.RBRACE);
+
+            return new ForNode(initialization, condition, increment, body);
+        }
+
+        private ASTNode ForeachStatement()
+        {
+            Eat(PerlToken.FOREACH);
+            Eat(PerlToken.LPAREN);
+
+            bool isDeclaration = false;
+            string variableName;
+
+            if (_currentToken.TokenType == PerlToken.MY)
+            {
+                Eat(PerlToken.MY);
+                isDeclaration = true;
+            }
+
+            if (_currentToken.TokenType == PerlToken.IDENT)
+            {
+                Token variableToken = _currentToken;
+                Eat(PerlToken.IDENT);
+                variableName = variableToken.Lexeme;
+            }
+            else
+            {
+                throw new Exception($"Expected token IDENT, got {_currentToken.TokenType}");
+            }
+
+            // Eat(PerlToken.AT);
+            Eat(PerlToken.LPAREN);
+            ASTNode collection = Expr();
+            Eat(PerlToken.RPAREN);
+            Eat(PerlToken.RBRACE);
+            ASTNode body = ParseBlock();
+            Eat(PerlToken.RBRACE);
+
+            return new ForeachNode(variableName, collection, body);
+        }
+
+        private ASTNode WhileStatement()
+        {
+            Eat(PerlToken.WHILE);
+            Eat(PerlToken.LPAREN);
+            ASTNode condition = Expr();
+            Eat(PerlToken.RPAREN);
+            Eat(PerlToken.LBRACE);
+            ASTNode body = ParseBlock();
+            Eat(PerlToken.RBRACE);
+
+            return new WhileNode(condition, body);
+        }
+    }
 }

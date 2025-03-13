@@ -9,3 +9,10 @@ if ($age <= 18) {
 } else {
     my $c = 1 * 22 + 10;
 }
+
+
+for (my $i = 1; $i <= 5; $i++) {
+    my $name = "Alice";
+}
+
+my $name = "Alice";

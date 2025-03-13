@@ -149,6 +149,12 @@ namespace MTRAN.LR3
                 Console.WriteLine(prefix + "│   Body:");
                 PrintAST(whileNode.Body, indent + 4, prefix + "│   ");
             }
+            else if (node is UnaryOperationNode unaryOp)
+            {
+                Console.WriteLine(prefix + "Unary Operation:");
+                Console.WriteLine(prefix + "│   Variable: " + unaryOp.Variable);
+                Console.WriteLine(prefix + "│   Operator: " + unaryOp.Operator);
+            }
         }
     }
 }
