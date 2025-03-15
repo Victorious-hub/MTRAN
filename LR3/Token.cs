@@ -115,7 +115,7 @@ namespace MTRAN.LR3
             { PerlToken.FOREACH, @"\bforeach\b" },              // foreach (e.g., foreach)
             { PerlToken.GOTO, @"\bgoto\b" },                    // goto (e.g., goto)
             { PerlToken.PACKAGE, @"\bpackage\b" },              // package (e.g., package)
-            { PerlToken.FUNC_SUB, @"\bsub\b" },                 // sub (e.g., sub)
+            { PerlToken.SUB, @"\bsub\b" },                 // sub (e.g., sub)
             { PerlToken.USE, @"\buse\b" },                      // use (e.g., use)
         };
 

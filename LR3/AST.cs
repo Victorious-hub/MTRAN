@@ -195,4 +195,62 @@ namespace MTRAN.LR3
             Body = body;
         }
     }
+
+    public class ReturnNode : ASTNode
+    {
+        public ASTNode Value { get; }
+
+        public ReturnNode(ASTNode value)
+        {
+            Value = value;
+        }
+    }
+
+    public class FunctionNode : ASTNode
+    {
+        public string Name { get; }
+        public List<string> Parameters { get; }
+        public ASTNode Body { get; }
+
+        public FunctionNode(string name, List<string> parameters, ASTNode body)
+        {
+            Name = name;
+            Parameters = parameters;
+            Body = body;
+        }
+    }
+
+    public class ArrayNode : ASTNode
+    {
+        public string Name { get; }
+        public List<ASTNode> Elements { get; }
+
+        public ArrayNode(string name, List<ASTNode> elements)
+        {
+            Name = name;
+            Elements = elements;
+        }
+    }
+
+    public class PunctuationNode : ASTNode
+    {
+        public string Punctuation { get; }
+
+        public PunctuationNode(string punctuation)
+        {
+            Punctuation = punctuation;
+        }
+    }
+
+    public class HashNode : ASTNode
+    {
+        public string Name { get; }
+        public List<(ASTNode Key, ASTNode Value)> Elements { get; }
+
+        public HashNode(string name, List<(ASTNode Key, ASTNode Value)> elements)
+        {
+            Name = name;
+            Elements = elements;
+        }
+    }
 }

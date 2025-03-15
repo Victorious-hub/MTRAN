@@ -59,7 +59,7 @@ namespace MTRAN.LR3
             {
                 foreach (var statement in block.Statements)
                 {
-                    PrintAST(statement, indent + 4, prefix + "│   ");
+                    PrintAST(statement, indent + 4, prefix + "");
                 }
             }
             else if (node is VariableDeclarationNode declaration)
@@ -123,11 +123,10 @@ namespace MTRAN.LR3
             else if (node is ForNode forNode)
             {
                 Console.WriteLine(prefix + "For:");
-                Console.WriteLine(prefix + "│   Initialization:");
                 PrintAST(forNode.Initialization, indent + 4, prefix + "│   ");
                 Console.WriteLine(prefix + "│   Condition:");
                 PrintAST(forNode.Condition, indent + 4, prefix + "│   ");
-                Console.WriteLine(prefix + "│   Increment:");
+                Console.WriteLine(prefix + "│   Increment/Decrement:");
                 PrintAST(forNode.Increment, indent + 4, prefix + "│   ");
                 Console.WriteLine(prefix + "│   Body:");
                 PrintAST(forNode.Body, indent + 4, prefix + "│   ");
@@ -151,9 +150,34 @@ namespace MTRAN.LR3
             }
             else if (node is UnaryOperationNode unaryOp)
             {
-                Console.WriteLine(prefix + "Unary Operation:");
-                Console.WriteLine(prefix + "│   Variable: " + unaryOp.Variable);
-                Console.WriteLine(prefix + "│   Operator: " + unaryOp.Operator);
+                Console.WriteLine(prefix + "│   Unary Operation:");
+                Console.WriteLine(prefix + "│   │   Variable: " + unaryOp.Variable);
+                Console.WriteLine(prefix + "│   │   Operator: " + unaryOp.Operator);
+            }
+            else if (node is FunctionNode functionNode)
+            {
+                Console.WriteLine(prefix + "Function:");
+                Console.WriteLine(prefix + "│   Name: " + functionNode.Name);
+                Console.WriteLine(prefix + "│   Parameters: " + string.Join(", ", functionNode.Parameters));
+                Console.WriteLine(prefix + "│   Body:");
+                PrintAST(functionNode.Body, indent + 4, prefix + "│   ");
+            }
+            else if (node is ReturnNode returnNode)
+            {
+                Console.WriteLine(prefix + "Return:");
+                PrintAST(returnNode.Value, indent + 4, prefix + "");
+            }
+            else if (node is ArrayNode arrayNode)
+            {
+                Console.WriteLine(prefix + "│   Expression:");
+                foreach (var element in arrayNode.Elements)
+                {
+                    PrintAST(element, indent + 4, prefix + "│   ");
+                }
+            }
+            else if (node is PunctuationNode punctuationNode)
+            {
+                Console.WriteLine(prefix + "│   Delimeter: " + punctuationNode.Punctuation);
             }
         }
     }

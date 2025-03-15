@@ -383,6 +383,7 @@ namespace MTRAN.LR3
                         AddToOutputTokens(numberToken);
                         continue;
                     }
+                    
 
                     if (currentChar == '$' || currentChar == '@' || currentChar == '%')
                     {
