@@ -32,6 +32,16 @@ namespace MTRAN.LR3
         }
     }
 
+    public class ParameterDeclarationNode : ASTNode
+    {
+        public List<VariableNode> Parameters { get; }
+
+        public ParameterDeclarationNode(List<VariableNode> parameters)
+        {
+            Parameters = parameters;
+        }
+    }
+
     public class BlockNode : ASTNode
     {
         public List<ASTNode> Statements { get; }
@@ -242,6 +252,17 @@ namespace MTRAN.LR3
         }
     }
 
+
+    public class ParenthesizedExpression : ASTNode
+    {
+        public ASTNode Expression { get; }
+
+        public ParenthesizedExpression(ASTNode expression)
+        {
+            Expression = expression;
+        }
+    }
+
     public class HashNode : ASTNode
     {
         public string Name { get; }
@@ -253,4 +274,5 @@ namespace MTRAN.LR3
             Elements = elements;
         }
     }
+
 }

@@ -35,7 +35,6 @@ namespace MTRAN.LR3
         private ASTNode Factor()
         {
             Token token = _currentToken;
-            Console.WriteLine(token.TokenType);
             if (token.TokenType == PerlToken.NUMBER)
             {
                 Eat(PerlToken.NUMBER);
@@ -54,6 +53,16 @@ namespace MTRAN.LR3
                     Eat(PerlToken.ASSIGN);
                     ASTNode value = Expr();
                     return new AssignmentNode(token.Lexeme, value);
+                }
+                else if (_currentToken.TokenType == PerlToken.INC)
+                {
+                    Eat(PerlToken.INC);
+                    return new UnaryOperationNode(token.Lexeme, "++");
+                }
+                else if (_currentToken.TokenType == PerlToken.DEC)
+                {
+                    Eat(PerlToken.DEC);
+                    return new UnaryOperationNode(token.Lexeme, "--");
                 }
                 return new VariableNode(token.Lexeme);
             }
@@ -77,6 +86,10 @@ namespace MTRAN.LR3
             {
                 Eat(PerlToken.IDENT);
                 return new VariableNode(token.Lexeme);
+            }
+            else if (token.TokenType == PerlToken.MY)
+            {
+                return Assignment();
             }
             else
             {
@@ -108,57 +121,103 @@ namespace MTRAN.LR3
 
         private ASTNode Expr()
         {
-            ASTNode node = Term();
+            return ParseLogicalOr();
+        }
 
-            while (
-                _currentToken.TokenType == PerlToken.ADD || 
-                _currentToken.TokenType == PerlToken.SUB ||
-                _currentToken.TokenType == PerlToken.MUL ||
-                _currentToken.TokenType == PerlToken.DIV ||
-                _currentToken.TokenType == PerlToken.MOD ||
-                _currentToken.TokenType == PerlToken.LESS ||
-                _currentToken.TokenType == PerlToken.GRT ||
-                _currentToken.TokenType == PerlToken.LESS_OR_EQUAL ||
-                _currentToken.TokenType == PerlToken.GRT_OR_EQUAL ||
-                _currentToken.TokenType == PerlToken.EQUAL ||
-                _currentToken.TokenType == PerlToken.NOT_EQUAL
-            ) 
+        private ASTNode ParseLogicalOr()
+        {
+            ASTNode node = ParseLogicalAnd();
+
+            while (_currentToken.TokenType == PerlToken.LOR || _currentToken.TokenType == PerlToken.OR)
             {
                 Token token = _currentToken;
-                if (token.TokenType == PerlToken.ADD)
-                {
-                    Eat(PerlToken.ADD);
-                }
-                else if (token.TokenType == PerlToken.SUB)
-                {
-                    Eat(PerlToken.SUB);
-                }
-                else if (token.TokenType == PerlToken.LESS)
-                {
-                    Eat(PerlToken.LESS);
-                }
-                else if (token.TokenType == PerlToken.GRT)
-                {
-                    Eat(PerlToken.GRT);
-                }
-                else if (token.TokenType == PerlToken.LESS_OR_EQUAL)
-                {
-                    Eat(PerlToken.LESS_OR_EQUAL);
-                }
-                else if (token.TokenType == PerlToken.GRT_OR_EQUAL)
-                {
-                    Eat(PerlToken.GRT_OR_EQUAL);
-                }
-                else if (token.TokenType == PerlToken.EQUAL)
-                {
-                    Eat(PerlToken.EQUAL);
-                }
-                else if (token.TokenType == PerlToken.NOT_EQUAL)
-                {
-                    Eat(PerlToken.NOT_EQUAL);
-                }
+                Eat(token.TokenType);
+                node = new BinaryOperationNode(node, token.Lexeme, ParseLogicalAnd());
+            }
 
-                node = new BinaryOperationNode(node, token.Lexeme, Term());
+            return node;
+        }
+
+        private ASTNode ParseLogicalAnd()
+        {
+            ASTNode node = ParseEquality();
+
+            while (_currentToken.TokenType == PerlToken.LAND || _currentToken.TokenType == PerlToken.AND)
+            {
+                Token token = _currentToken;
+                Eat(token.TokenType);
+                node = new BinaryOperationNode(node, token.Lexeme, ParseEquality());
+            }
+
+            return node;
+        }
+
+        private ASTNode ParseEquality()
+        {
+            ASTNode node = ParseBitwiseXor();
+
+            while (_currentToken.TokenType == PerlToken.EQUAL || _currentToken.TokenType == PerlToken.NOT_EQUAL)
+            {
+                Token token = _currentToken;
+                Eat(token.TokenType);
+                node = new BinaryOperationNode(node, token.Lexeme, ParseBitwiseXor());
+            }
+
+            return node;
+        }
+
+        private ASTNode ParseBitwiseXor()
+        {
+            ASTNode node = ParseRelational();
+
+            while (_currentToken.TokenType == PerlToken.BITWISE_XOR || _currentToken.TokenType == PerlToken.XOR)
+            {
+                Token token = _currentToken;
+                Eat(token.TokenType);
+                node = new BinaryOperationNode(node, token.Lexeme, ParseRelational());
+            }
+
+            return node;
+        }
+
+        private ASTNode ParseRelational()
+        {
+            ASTNode node = ParseAdditive();
+
+            while (_currentToken.TokenType == PerlToken.LESS || _currentToken.TokenType == PerlToken.GRT ||
+                _currentToken.TokenType == PerlToken.LESS_OR_EQUAL || _currentToken.TokenType == PerlToken.GRT_OR_EQUAL)
+            {
+                Token token = _currentToken;
+                Eat(token.TokenType);
+                node = new BinaryOperationNode(node, token.Lexeme, ParseAdditive());
+            }
+
+            return node;
+        }
+
+        private ASTNode ParseAdditive()
+        {
+            ASTNode node = ParseMultiplicative();
+
+            while (_currentToken.TokenType == PerlToken.ADD || _currentToken.TokenType == PerlToken.SUB)
+            {
+                Token token = _currentToken;
+                Eat(token.TokenType);
+                node = new BinaryOperationNode(node, token.Lexeme, ParseMultiplicative());
+            }
+
+            return node;
+        }
+
+        private ASTNode ParseMultiplicative()
+        {
+            ASTNode node = Factor();
+
+            while (_currentToken.TokenType == PerlToken.MUL || _currentToken.TokenType == PerlToken.DIV || _currentToken.TokenType == PerlToken.MOD)
+            {
+                Token token = _currentToken;
+                Eat(token.TokenType);
+                node = new BinaryOperationNode(node, token.Lexeme, Factor());
             }
 
             return node;
@@ -196,7 +255,7 @@ namespace MTRAN.LR3
                 Eat(PerlToken.RBRACE);
             }
 
-            return new IfNode(condition, thenBranch, elseIfBranches, elseBranch);
+            return new IfNode(new ParenthesizedExpression(condition), thenBranch, elseIfBranches, elseBranch);
         }
 
         private ASTNode ParseBlock()
@@ -210,11 +269,21 @@ namespace MTRAN.LR3
                 {
                     statements.Add(node);
                 }
-
+                Console.WriteLine(_currentToken.TokenType);
                 if (_currentToken.TokenType == PerlToken.SEMICOLON)
                 {
                     statements.Add(new PunctuationNode(";"));
                     Eat(PerlToken.SEMICOLON);
+                }
+                else if (_currentToken.TokenType == PerlToken.LPAREN)
+                {
+                    statements.Add(new PunctuationNode("("));
+                    Eat(PerlToken.LPAREN);
+                }
+                else if (_currentToken.TokenType == PerlToken.RPAREN)
+                {
+                    statements.Add(new PunctuationNode(")"));
+                    Eat(PerlToken.RPAREN);
                 }
                 else if (_currentToken.TokenType != PerlToken.RBRACE && _currentToken.TokenType != PerlToken.EOF_)
                 {
@@ -327,6 +396,49 @@ namespace MTRAN.LR3
                     throw new Exception($"Expected token ASSIGN, got {_currentToken.TokenType}");
                 }
             }
+            else if (_currentToken.TokenType == PerlToken.IDENT && _currentToken.Lexeme.StartsWith("%"))
+            {
+                Token hashToken = _currentToken;
+                Eat(PerlToken.IDENT);
+
+                if (_currentToken.TokenType == PerlToken.ASSIGN)
+                {
+                    Eat(PerlToken.ASSIGN);
+                    Eat(PerlToken.LPAREN);
+                    List<(ASTNode Key, ASTNode Value)> elements = new List<(ASTNode Key, ASTNode Value)>();
+                    while (_currentToken.TokenType != PerlToken.RPAREN)
+                    {
+                        ASTNode key = Expr();
+                        if (_currentToken.TokenType == PerlToken.HASH_ASSIGN)
+                        {
+                            Eat(PerlToken.HASH_ASSIGN);
+                        }
+                        else
+                        {
+                            throw new Exception($"Expected token HASH_ASSIGN, got {_currentToken.TokenType}");
+                        }
+                        ASTNode value = Expr();
+                        elements.Add((key, value));
+                        if (_currentToken.TokenType == PerlToken.COMMA)
+                        {
+                            Eat(PerlToken.COMMA);
+                        }
+                    }
+                    Eat(PerlToken.RPAREN);
+                    if (isDeclaration)
+                    {
+                        return new VariableDeclarationNode(keyword, hashToken.Lexeme, new HashNode(hashToken.Lexeme, elements));
+                    }
+                    else
+                    {
+                        return new AssignmentNode(hashToken.Lexeme, new HashNode(hashToken.Lexeme, elements));
+                    }
+                }
+                else
+                {
+                    throw new Exception($"Expected token ASSIGN, got {_currentToken.TokenType}");
+                }
+            }
             else if (_currentToken.TokenType == PerlToken.IDENT)
             {
                 Token variableToken = _currentToken;
@@ -370,17 +482,23 @@ namespace MTRAN.LR3
         {
             Eat(PerlToken.FOR);
             Eat(PerlToken.LPAREN);
+
             ASTNode initialization = Assignment();
             Eat(PerlToken.SEMICOLON);
             ASTNode condition = Expr();
             Eat(PerlToken.SEMICOLON);
             ASTNode increment = Assignment();
             Eat(PerlToken.RPAREN);
+
+            ASTNode forExpression = new ParenthesizedExpression(
+                new StatementListNode(new List<ASTNode> { initialization, condition, increment })
+            );
+
             Eat(PerlToken.LBRACE);
             ASTNode body = ParseBlock();
             Eat(PerlToken.RBRACE);
 
-            return new ForNode(initialization, condition, increment, body);
+            return new ForNode(forExpression, null, null, body);
         }
 
         private ASTNode ForeachStatement()
@@ -408,7 +526,6 @@ namespace MTRAN.LR3
                 throw new Exception($"Expected token IDENT, got {_currentToken.TokenType}");
             }
 
-            // Eat(PerlToken.AT);
             Eat(PerlToken.LPAREN);
             ASTNode collection = Expr();
             Eat(PerlToken.RPAREN);
@@ -416,9 +533,9 @@ namespace MTRAN.LR3
             ASTNode body = ParseBlock();
             Eat(PerlToken.RBRACE);
 
-            return new ForeachNode(variableName, collection, body);
+            return new ForeachNode(variableName, new ParenthesizedExpression(collection), body);
         }
-
+        
         private ASTNode WhileStatement()
         {
             Eat(PerlToken.WHILE);
@@ -429,9 +546,8 @@ namespace MTRAN.LR3
             ASTNode body = ParseBlock();
             Eat(PerlToken.RBRACE);
 
-            return new WhileNode(condition, body);
+            return new WhileNode(new ParenthesizedExpression(condition), body);
         }
-
         private ASTNode FunctionDeclaration()
         {
             Eat(PerlToken.SUB);
@@ -468,6 +584,5 @@ namespace MTRAN.LR3
 
             return new FunctionNode(functionName, parameters, body);
         }
-
     }
 }

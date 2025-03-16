@@ -279,6 +279,7 @@ namespace MTRAN.LR3
                         case PerlToken.GRT_OR_EQUAL:
                         case PerlToken.NOT_EQUAL:
                         case PerlToken.HASH_ASSIGN:
+                        case PerlToken.EQUAL:
                             operators.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description, tokenData.token));
                             break;
                         default:
@@ -567,6 +568,8 @@ namespace MTRAN.LR3
                 case '~':
                     return (PerlToken.BITWISE_NOT, 1);
                 case '=':
+                    if (_index + 1 < line.Length && line[_index + 1] == '=')
+                        return (PerlToken.EQUAL, 2);
                     if (_index + 1 < line.Length && line[_index + 1] == '>')
                         return (PerlToken.HASH_ASSIGN, 2);
                     return (PerlToken.ASSIGN, 1);

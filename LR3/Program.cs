@@ -68,13 +68,12 @@ namespace MTRAN.LR3
                 Console.WriteLine(prefix + "│   Keyword: " + declaration.Keyword);
                 Console.WriteLine(prefix + "│   Variable: " + declaration.Variable);
                 Console.WriteLine(prefix + "│   Assignment:");
-                PrintAST(declaration.Value, indent + 4, prefix + "│   ");
+                PrintAST(declaration.Value, indent + 4, prefix + "│   │   ");
             }
             else if (node is AssignmentNode assignment)
             {
                 Console.WriteLine(prefix + "Assignment:");
                 Console.WriteLine(prefix + "│   Variable: " + assignment.Variable);
-                Console.WriteLine(prefix + "│   Operator: =");
                 PrintAST(assignment.Value, indent + 4, prefix + "│   ");
             }
             else if (node is BinaryOperationNode binaryOp)
@@ -102,22 +101,22 @@ namespace MTRAN.LR3
             {
                 Console.WriteLine(prefix + "If:");
                 Console.WriteLine(prefix + "│   Condition:");
-                PrintAST(ifNode.Condition, indent + 4, prefix + "│   ");
+                PrintAST(ifNode.Condition, indent + 4, prefix + "│   │   ");
                 Console.WriteLine(prefix + "│   Body:");
-                PrintAST(ifNode.ThenBranch, indent + 4, prefix + "│   ");
+                PrintAST(ifNode.ThenBranch, indent + 4, prefix + "│   │   ");
                 foreach (var elseIfNode in ifNode.ElseIfBranches)
                 {
                     Console.WriteLine(prefix + "ElseIf:");
                     Console.WriteLine(prefix + "│   Condition:");
                     PrintAST(elseIfNode.Condition, indent + 4, prefix + "│   ");
                     Console.WriteLine(prefix + "│   Body:");
-                    PrintAST(elseIfNode.ThenBranch, indent + 4, prefix + "│   ");
+                    PrintAST(elseIfNode.ThenBranch, indent + 4, prefix + "│   │   ");
                 }
                 if (ifNode.ElseBranch != null)
                 {
                     Console.WriteLine(prefix + "Else:");
                     Console.WriteLine(prefix + "│   Body:");
-                    PrintAST(ifNode.ElseBranch, indent + 4, prefix + "│   ");
+                    PrintAST(ifNode.ElseBranch, indent + 4, prefix + "│   │   ");
                 }
             }
             else if (node is ForNode forNode)
@@ -129,7 +128,7 @@ namespace MTRAN.LR3
                 Console.WriteLine(prefix + "│   Increment/Decrement:");
                 PrintAST(forNode.Increment, indent + 4, prefix + "│   ");
                 Console.WriteLine(prefix + "│   Body:");
-                PrintAST(forNode.Body, indent + 4, prefix + "│   ");
+                PrintAST(forNode.Body, indent + 4, prefix + "│   │   ");
             }
             else if (node is ForeachNode foreachNode)
             {
@@ -138,7 +137,7 @@ namespace MTRAN.LR3
                 Console.WriteLine(prefix + "│   Collection:");
                 PrintAST(foreachNode.Collection, indent + 4, prefix + "│   ");
                 Console.WriteLine(prefix + "│   Body:");
-                PrintAST(foreachNode.Body, indent + 4, prefix + "│   ");
+                PrintAST(foreachNode.Body, indent + 4, prefix + "│   │   ");
             }
             else if (node is WhileNode whileNode)
             {
@@ -146,7 +145,7 @@ namespace MTRAN.LR3
                 Console.WriteLine(prefix + "│   Condition:");
                 PrintAST(whileNode.Condition, indent + 4, prefix + "│   ");
                 Console.WriteLine(prefix + "│   Body:");
-                PrintAST(whileNode.Body, indent + 4, prefix + "│   ");
+                PrintAST(whileNode.Body, indent + 4, prefix + "│   │   ");
             }
             else if (node is UnaryOperationNode unaryOp)
             {
@@ -160,7 +159,7 @@ namespace MTRAN.LR3
                 Console.WriteLine(prefix + "│   Name: " + functionNode.Name);
                 Console.WriteLine(prefix + "│   Parameters: " + string.Join(", ", functionNode.Parameters));
                 Console.WriteLine(prefix + "│   Body:");
-                PrintAST(functionNode.Body, indent + 4, prefix + "│   ");
+                PrintAST(functionNode.Body, indent + 4, prefix + "│   │   ");
             }
             else if (node is ReturnNode returnNode)
             {
@@ -175,9 +174,28 @@ namespace MTRAN.LR3
                     PrintAST(element, indent + 4, prefix + "│   ");
                 }
             }
+            else if (node is ParenthesizedExpression parenthesizedExpression)
+            {
+                Console.WriteLine(prefix + "ParenthesizedExpression:");
+                Console.WriteLine(prefix + "│   Delimiter: (");
+                PrintAST(parenthesizedExpression.Expression, indent + 4, prefix + "│   │   ");
+                Console.WriteLine(prefix + "│   Delimiter: )");
+            }
             else if (node is PunctuationNode punctuationNode)
             {
-                Console.WriteLine(prefix + "│   Delimeter: " + punctuationNode.Punctuation);
+                Console.WriteLine(prefix + "│   Delimiter: " + punctuationNode.Punctuation);
+            }
+            else if (node is HashNode hashNode)
+            {
+                Console.WriteLine(prefix + "Hash:");
+                Console.WriteLine(prefix + "│   Name: " + hashNode.Name);
+                foreach (var element in hashNode.Elements)
+                {
+                    Console.WriteLine(prefix + "│   │   Key:");
+                    PrintAST(element.Key, indent + 4, prefix + "│   │   ");
+                    Console.WriteLine(prefix + "│   Value:");
+                    PrintAST(element.Value, indent + 4, prefix + "│   │   ");
+                }
             }
         }
     }

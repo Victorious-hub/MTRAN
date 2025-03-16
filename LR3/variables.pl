@@ -1,20 +1,24 @@
-# my $c = 1 * 22 + 10;
+my $c = 1 * 22 + 10;
+my $name = "Alice";
+
+
+if ($age <= 18) {
+    my $c = 1 * 22 + 10;
+} elsif ($age < 65) {
+    my $c = 1 * 22 + 10;
+} else {
+    my $c = 1 * 22 + 10;
+}
+
+while (10 == 9 && 1 ^ 2 or 2 != 3) {
+    # my $c = 1 * 22 + 10;
+    $counter++;
+}
+
 # my $name = "Alice";
 
-
-# if ($age <= 18) {
-#     my $c = 1 * 22 + 10;
-# } elsif ($age < 65) {
-#     my $c = 1 * 22 + 10;
-# } else {
-#     my $c = 1 * 22 + 10;
-# }
-
-
-# my $name = "Alice";
-
-$a = 10 + 5;
-my @colors = ("Red", "Green", "Blue");
+# $a = 10 + 5;
+# my @colors = ("Red", "Green", "Blue");
 
 sub check_age {
     # my ($age) = @_;
@@ -31,3 +35,18 @@ sub check_age {
 }
 
 $e = 1 * (2+4);
+
+
+my %person = (
+    name => "Bob",
+    age  => 1.2323,
+    city => "New York"
+);
+
+my @colors = ("Red", "Green", "Blue");
+
+
+while (10 == 9 && 1 ^ 2 or 2 != 3) {
+    # my $c = 1 * 22 + 10;
+    $counter++;
+}
