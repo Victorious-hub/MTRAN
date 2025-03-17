@@ -1,0 +1,5 @@
+/home/shyskov/Documents/libs/sem6/MTRAN/Parser/obj/Debug/net8.0-windows/Parser.GeneratedMSBuildEditorConfig.editorconfig
+/home/shyskov/Documents/libs/sem6/MTRAN/Parser/obj/Debug/net8.0-windows/Parser.AssemblyInfoInputs.cache
+/home/shyskov/Documents/libs/sem6/MTRAN/Parser/obj/Debug/net8.0-windows/Parser.AssemblyInfo.cs
+/home/shyskov/Documents/libs/sem6/MTRAN/Parser/obj/Debug/net8.0-windows/Parser.csproj.CoreCompileInputs.cache
+/home/shyskov/Documents/libs/sem6/MTRAN/Parser/obj/Debug/net8.0-windows/Parser.sourcelink.json
