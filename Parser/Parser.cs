@@ -35,6 +35,7 @@ namespace MTRAN.Parser
         private ASTNode Factor()
         {
             Token token = _currentToken;
+
             if (token.TokenType == PerlToken.NUMBER)
             {
                 Eat(PerlToken.NUMBER);
@@ -48,7 +49,17 @@ namespace MTRAN.Parser
             else if (token.TokenType == PerlToken.IDENT)
             {
                 Eat(PerlToken.IDENT);
-                if (_currentToken.TokenType == PerlToken.ASSIGN)
+
+                // Handle compound assignment operators
+                if (_currentToken.TokenType == PerlToken.ADD_ASSIGN || _currentToken.TokenType == PerlToken.SUB_ASSIGN ||
+                    _currentToken.TokenType == PerlToken.MUL_ASSIGN || _currentToken.TokenType == PerlToken.DIV_ASSIGN)
+                {
+                    Token operatorToken = _currentToken;
+                    Eat(operatorToken.TokenType);
+                    ASTNode value = Expr();
+                    return new CompoundAssignmentNode(token.Lexeme, operatorToken.Lexeme, value);
+                }
+                else if (_currentToken.TokenType == PerlToken.ASSIGN)
                 {
                     Eat(PerlToken.ASSIGN);
                     ASTNode value = Expr();
@@ -64,6 +75,7 @@ namespace MTRAN.Parser
                     Eat(PerlToken.DEC);
                     return new UnaryOperationNode(token.Lexeme, "--");
                 }
+
                 return new VariableNode(token.Lexeme);
             }
             else if (token.TokenType == PerlToken.STRING)
@@ -356,6 +368,7 @@ namespace MTRAN.Parser
             bool isDeclaration = false;
             string keyword = null;
 
+            // Check if the statement starts with "my"
             if (_currentToken.TokenType == PerlToken.MY)
             {
                 Eat(PerlToken.MY);
@@ -445,10 +458,31 @@ namespace MTRAN.Parser
                 Token variableToken = _currentToken;
                 Eat(PerlToken.IDENT);
 
-                if (_currentToken.TokenType == PerlToken.ASSIGN)
+                // Handle compound assignment operators
+                if (_currentToken.TokenType == PerlToken.ADD_ASSIGN || _currentToken.TokenType == PerlToken.SUB_ASSIGN ||
+                    _currentToken.TokenType == PerlToken.MUL_ASSIGN || _currentToken.TokenType == PerlToken.DIV_ASSIGN )
                 {
+                    Token operatorToken = _currentToken;
+                    Eat(operatorToken.TokenType);
+                    ASTNode value = Expr();
+
+                    if (isDeclaration)
+                    {
+                        // Return a declaration node for "my $a += 1;"
+                        return new VariableDeclarationNode(keyword, variableToken.Lexeme, new CompoundAssignmentNode(variableToken.Lexeme, operatorToken.Lexeme, value));
+                    }
+                    else
+                    {
+                        // Return a compound assignment node for "$a += 1;"
+                        return new CompoundAssignmentNode(variableToken.Lexeme, operatorToken.Lexeme, value);
+                    }
+                }
+                else if (_currentToken.TokenType == PerlToken.ASSIGN)
+                {
+                    // Handle regular assignment
                     Eat(PerlToken.ASSIGN);
                     ASTNode value = Expr();
+
                     if (isDeclaration)
                     {
                         return new VariableDeclarationNode(keyword, variableToken.Lexeme, value);
@@ -460,21 +494,15 @@ namespace MTRAN.Parser
                 }
                 else if (_currentToken.TokenType == PerlToken.INC)
                 {
+                    // Handle increment (++)
                     Eat(PerlToken.INC);
                     return new UnaryOperationNode(variableToken.Lexeme, "++");
                 }
                 else if (_currentToken.TokenType == PerlToken.DEC)
                 {
+                    // Handle decrement (--)
                     Eat(PerlToken.DEC);
                     return new UnaryOperationNode(variableToken.Lexeme, "--");
-                }
-                else if (_currentToken.TokenType == PerlToken.ADD_ASSIGN || _currentToken.TokenType == PerlToken.SUB_ASSIGN ||
-                 _currentToken.TokenType == PerlToken.MUL_ASSIGN || _currentToken.TokenType == PerlToken.DIV_ASSIGN)
-                {
-                    Token operatorToken = _currentToken;
-                    Eat(operatorToken.TokenType);
-                    ASTNode value = Expr();
-                    return new CompoundAssignmentNode(variableToken.Lexeme, operatorToken.Lexeme, value);
                 }
                 else
                 {
@@ -483,7 +511,7 @@ namespace MTRAN.Parser
             }
             else
             {
-                return null;
+                throw new Exception($"Expected identifier, got {_currentToken.TokenType}");
             }
         }
 
@@ -493,14 +521,33 @@ namespace MTRAN.Parser
             Eat(PerlToken.LPAREN);
 
             ASTNode initialization = Assignment();
-            Eat(PerlToken.SEMICOLON);
+            ASTNode initSemicolon = null;
+            if (_currentToken.TokenType == PerlToken.SEMICOLON)
+            {
+                initSemicolon = new PunctuationNode(";");
+                Eat(PerlToken.SEMICOLON);
+            }
+
             ASTNode condition = Expr();
-            Eat(PerlToken.SEMICOLON);
+            ASTNode conditionSemicolon = null;
+            if (_currentToken.TokenType == PerlToken.SEMICOLON)
+            {
+                conditionSemicolon = new PunctuationNode(";");
+                Eat(PerlToken.SEMICOLON);
+            }
+
             ASTNode increment = Assignment();
             Eat(PerlToken.RPAREN);
 
             ASTNode forExpression = new ParenthesizedExpression(
-                new StatementListNode(new List<ASTNode> { initialization, condition, increment })
+                new StatementListNode(new List<ASTNode>
+                {
+                    initialization,
+                    initSemicolon,
+                    condition,
+                    conditionSemicolon,
+                    increment
+                })
             );
 
             Eat(PerlToken.LBRACE);

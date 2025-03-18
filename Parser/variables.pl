@@ -10,15 +10,15 @@ if ($age <= 18) {
     my $c = 1 * 22 + 10;
 }
 
-while (10 == 9 && 1 ^ 2 or 2 != 3) {
-    # my $c = 1 * 22 + 10;
-    $counter++;
-}
+# while (10 == 9 && 1 ^ 2 or 2 != 3) {
+#     # my $c = 1 * 22 + 10;
+#     $counter++;
+# }
 
-# my $name = "Alice";
+# # my $name = "Alice";
 
-# $a = 10 + 5;
-# my @colors = ("Red", "Green", "Blue");
+# # $a = 10 + 5;
+# # my @colors = ("Red", "Green", "Blue");
 
 sub check_age {
     # my ($age) = @_;
@@ -53,7 +53,7 @@ while (10 == 9 && 1 ^ 2 or 2 != 3) {
 
 
 foreach my $num (@numbers) {
-    
+    $counter++;
 }
 
 
@@ -62,5 +62,24 @@ for (my $i = 1; $i <= 3; $i++) {
         $counter++;
     }
 }
-
 my $a += 1;
+$a += 1;
+
+my $a = 1;
+
+my $adult = 10 + $a;
+
+
+while (10 == 9 && 1 ^ 2 or 2 != 3) {
+    # my $c = 1 * 22 + 10;
+    $counter++;
+}
+
+for (my $j = 1; $j <= 3; $j++) {
+        $counter++;
+    }
+
+# $j <= 3;
+my $j = 1;
+
+$j = 1;
