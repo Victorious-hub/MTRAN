@@ -48,7 +48,25 @@ namespace MTRAN.Parser
             }
             else if (token.TokenType == PerlToken.IDENT)
             {
+                string functionName = token.Lexeme;
                 Eat(PerlToken.IDENT);
+
+                // Check if this is a function call
+                if (_currentToken.TokenType == PerlToken.LPAREN)
+                {
+                    Eat(PerlToken.LPAREN);
+                    List<ASTNode> arguments = new List<ASTNode>();
+                    while (_currentToken.TokenType != PerlToken.RPAREN)
+                    {
+                        arguments.Add(Expr());
+                        if (_currentToken.TokenType == PerlToken.COMMA)
+                        {
+                            Eat(PerlToken.COMMA);
+                        }
+                    }
+                    Eat(PerlToken.RPAREN);
+                    return new FunctionCallNode(functionName, arguments);
+                }
 
                 // Handle compound assignment operators
                 if (_currentToken.TokenType == PerlToken.ADD_ASSIGN || _currentToken.TokenType == PerlToken.SUB_ASSIGN ||
@@ -82,6 +100,33 @@ namespace MTRAN.Parser
             {
                 Eat(PerlToken.STRING);
                 return new StringNode(token.Lexeme);
+            }
+            else if (_currentToken.TokenType == PerlToken.SHIFT)
+            {
+                Eat(PerlToken.SHIFT);
+                return new KeywordNode("shift");
+            }
+            else if (_currentToken.TokenType == PerlToken.BLESS)
+            {
+                Eat(PerlToken.BLESS);
+
+                // Parse the object being blessed
+                ASTNode obj = Expr();
+
+                // Optionally, parse the class name (if provided)
+                ASTNode cls = null;
+                if (_currentToken.TokenType == PerlToken.COMMA)
+                {
+                    Eat(PerlToken.COMMA);
+                    cls = Expr();
+                }
+
+                return new BlessNode(obj, cls);
+            }
+            else if (_currentToken.TokenType == PerlToken.NEW)
+            {
+                Eat(PerlToken.NEW);
+                return new KeywordNode("new");
             }
             else if (token.TokenType == PerlToken.LPAREN)
             {
@@ -345,10 +390,58 @@ namespace MTRAN.Parser
             {
                 return ReturnStatement();
             }
+            else if (_currentToken.TokenType == PerlToken.PRINT)
+            {
+                return PrintStatement();
+            }
+            else if (_currentToken.TokenType == PerlToken.PACKAGE)
+            {
+                return ClassDeclaration();
+            }
             else
             {
                 return Expr();
             }
+        }
+
+        private ASTNode ClassDeclaration()
+        {
+            Eat(PerlToken.PACKAGE);
+
+            // Parse class name
+            if (_currentToken.TokenType != PerlToken.IDENT)
+            {
+                throw new Exception($"Expected class name, got {_currentToken.TokenType}");
+            }
+            string className = _currentToken.Lexeme;
+            Eat(PerlToken.IDENT);
+
+            List<ASTNode> methods = new List<ASTNode>();
+
+            // Parse methods inside the class
+            while (_currentToken.TokenType == PerlToken.SUB)
+            {
+                methods.Add(ClassFunctionDeclaration());
+            }
+
+            return new ClassNode(className, methods);
+        }
+
+        private ASTNode PrintStatement()
+        {
+            Eat(PerlToken.PRINT);
+
+            List<ASTNode> arguments = new List<ASTNode>();
+            while (_currentToken.TokenType != PerlToken.SEMICOLON && _currentToken.TokenType != PerlToken.EOF_)
+            {
+                arguments.Add(Expr());
+                if (_currentToken.TokenType == PerlToken.COMMA)
+                {
+                    Eat(PerlToken.COMMA);
+                }
+            }
+
+            return new PrintStatementNode(arguments);
         }
 
         private ASTNode ReturnStatement()
@@ -376,6 +469,80 @@ namespace MTRAN.Parser
                 keyword = "my";
             }
 
+            if (_currentToken.TokenType == PerlToken.LPAREN)
+            {
+                // Handle parentheses for grouped assignments (e.g., my ($a, $b) = @_;)
+                Eat(PerlToken.LPAREN);
+                List<ASTNode> variables = new List<ASTNode>();
+                while (_currentToken.TokenType != PerlToken.RPAREN)
+                {
+                    if (_currentToken.TokenType == PerlToken.IDENT)
+                    {
+                        string variableName = _currentToken.Lexeme;
+                        Eat(PerlToken.IDENT);
+                        variables.Add(new VariableNode(variableName));
+                    }
+                    if (_currentToken.TokenType == PerlToken.COMMA)
+                    {
+                        Eat(PerlToken.COMMA);
+                    }
+                }
+                Eat(PerlToken.RPAREN);
+
+                if (_currentToken.TokenType == PerlToken.ASSIGN)
+                {
+                    Eat(PerlToken.ASSIGN);
+                    ASTNode value = Expr();
+                    return new GroupedAssignmentNode(variables, value);
+                }
+                else
+                {
+                    throw new Exception($"Expected token ASSIGN, got {_currentToken.TokenType}");
+                }
+            }
+
+            // if (_currentToken.TokenType == PerlToken.IDENT)
+            // {
+            //     Token variableToken = _currentToken;
+            //     Eat(PerlToken.IDENT);
+
+            //     if (_currentToken.TokenType == PerlToken.ASSIGN)
+            //     {
+            //         Eat(PerlToken.ASSIGN);
+
+            //         if (_currentToken.TokenType == PerlToken.LPAREN)
+            //         {
+            //             // Handle hash declarations
+            //             ASTNode hash = ParseHash();
+            //             if (isDeclaration)
+            //             {
+            //                 return new VariableDeclarationNode(keyword, variableToken.Lexeme, hash);
+            //             }
+            //             else
+            //             {
+            //                 return new AssignmentNode(variableToken.Lexeme, hash);
+            //             }
+            //         }
+            //         else
+            //         {
+            //             // Handle regular assignments
+            //             ASTNode value = Expr();
+            //             if (isDeclaration)
+            //             {
+            //                 return new VariableDeclarationNode(keyword, variableToken.Lexeme, value);
+            //             }
+            //             else
+            //             {
+            //                 return new AssignmentNode(variableToken.Lexeme, value);
+            //             }
+            //         }
+            //     }
+            //     else
+            //     {
+            //         throw new Exception($"Expected token ASSIG1111N, got {_currentToken.TokenType}");
+            //     }
+            // }
+            
             if (_currentToken.TokenType == PerlToken.IDENT && _currentToken.Lexeme.StartsWith("@"))
             {
                 Token arrayToken = _currentToken;
@@ -458,10 +625,41 @@ namespace MTRAN.Parser
                 Token variableToken = _currentToken;
                 Eat(PerlToken.IDENT);
 
-                // Handle compound assignment operators
-                if (_currentToken.TokenType == PerlToken.ADD_ASSIGN || _currentToken.TokenType == PerlToken.SUB_ASSIGN ||
-                    _currentToken.TokenType == PerlToken.MUL_ASSIGN || _currentToken.TokenType == PerlToken.DIV_ASSIGN )
+                if (_currentToken.TokenType == PerlToken.ASSIGN)
                 {
+                    Eat(PerlToken.ASSIGN);
+
+                    if (_currentToken.TokenType == PerlToken.LPAREN)
+                    {
+                        // Handle hash declarations
+                        ASTNode hash = ParseHash();
+                        if (isDeclaration)
+                        {
+                            return new VariableDeclarationNode(keyword, variableToken.Lexeme, hash);
+                        }
+                        else
+                        {
+                            return new AssignmentNode(variableToken.Lexeme, hash);
+                        }
+                    }
+                    else
+                    {
+                        // Handle regular assignments
+                        ASTNode value = Expr();
+                        if (isDeclaration)
+                        {
+                            return new VariableDeclarationNode(keyword, variableToken.Lexeme, value);
+                        }
+                        else
+                        {
+                            return new AssignmentNode(variableToken.Lexeme, value);
+                        }
+                    }
+                }
+                else if (_currentToken.TokenType == PerlToken.ADD_ASSIGN || _currentToken.TokenType == PerlToken.SUB_ASSIGN ||
+                        _currentToken.TokenType == PerlToken.MUL_ASSIGN || _currentToken.TokenType == PerlToken.DIV_ASSIGN)
+                {
+                    // Handle compound assignment operators
                     Token operatorToken = _currentToken;
                     Eat(operatorToken.TokenType);
                     ASTNode value = Expr();
@@ -475,21 +673,6 @@ namespace MTRAN.Parser
                     {
                         // Return a compound assignment node for "$a += 1;"
                         return new CompoundAssignmentNode(variableToken.Lexeme, operatorToken.Lexeme, value);
-                    }
-                }
-                else if (_currentToken.TokenType == PerlToken.ASSIGN)
-                {
-                    // Handle regular assignment
-                    Eat(PerlToken.ASSIGN);
-                    ASTNode value = Expr();
-
-                    if (isDeclaration)
-                    {
-                        return new VariableDeclarationNode(keyword, variableToken.Lexeme, value);
-                    }
-                    else
-                    {
-                        return new AssignmentNode(variableToken.Lexeme, value);
                     }
                 }
                 else if (_currentToken.TokenType == PerlToken.INC)
@@ -513,6 +696,53 @@ namespace MTRAN.Parser
             {
                 throw new Exception($"Expected identifier, got {_currentToken.TokenType}");
             }
+        }
+
+
+        private ASTNode ParseHash()
+        {
+            Eat(PerlToken.LPAREN); // Consume the opening parenthesis
+
+            List<(ASTNode Key, ASTNode Value)> elements = new List<(ASTNode Key, ASTNode Value)>();
+
+            while (_currentToken.TokenType != PerlToken.RPAREN)
+            {
+                // Parse the key (must be a string or identifier)
+                ASTNode key = null;
+                if (_currentToken.TokenType == PerlToken.STRING || _currentToken.TokenType == PerlToken.IDENT)
+                {
+                    key = new StringNode(_currentToken.Lexeme);
+                    Eat(_currentToken.TokenType);
+                }
+                else
+                {
+                    throw new Exception($"Expected string or identifier as hash key, got {_currentToken.TokenType}");
+                }
+
+                // Expect the hash assignment operator (=>)
+                if (_currentToken.TokenType == PerlToken.HASH_ASSIGN)
+                {
+                    Eat(PerlToken.HASH_ASSIGN);
+                }
+                else
+                {
+                    throw new Exception($"Expected token HASH_ASSIGN (=>), got {_currentToken.TokenType}");
+                }
+
+                // Parse the value (expression)
+                ASTNode value = Expr();
+                elements.Add((key, value));
+
+                // Handle commas between hash elements
+                if (_currentToken.TokenType == PerlToken.COMMA)
+                {
+                    Eat(PerlToken.COMMA);
+                }
+            }
+
+            Eat(PerlToken.RPAREN); // Consume the closing parenthesis
+
+            return new HashNode("hash", elements);
         }
 
         private ASTNode ForStatement()
@@ -610,6 +840,86 @@ namespace MTRAN.Parser
                     if (_currentToken.TokenType == PerlToken.MY)
                     {
                         Eat(PerlToken.MY);
+                        if (_currentToken.TokenType == PerlToken.LPAREN)
+                        {
+                            Eat(PerlToken.LPAREN);
+                            while (_currentToken.TokenType != PerlToken.RPAREN)
+                            {
+                                string paramName = _currentToken.Lexeme;
+                                Eat(PerlToken.IDENT);
+                                parameters.Add(new VariableDeclarationNode("my", paramName, null));
+
+                                if (_currentToken.TokenType == PerlToken.COMMA)
+                                {
+                                    Eat(PerlToken.COMMA);
+                                }
+                            }
+                            Eat(PerlToken.RPAREN);
+                        }
+                        else
+                        {
+                            string paramName = _currentToken.Lexeme;
+                            Eat(PerlToken.IDENT);
+                            parameters.Add(new VariableDeclarationNode("my", paramName, null));
+                        }
+                    }
+                    else if (_currentToken.TokenType == PerlToken.IDENT)
+                    {
+                        parameters.Add(new VariableNode(_currentToken.Lexeme));
+                        Eat(PerlToken.IDENT);
+                    }
+                    if (_currentToken.TokenType == PerlToken.COMMA)
+                    {
+                        Eat(PerlToken.COMMA);
+                    }
+                }
+                Eat(PerlToken.RPAREN);
+            }
+
+            // Handle assignment to parameters (e.g., my ($age) = @_;)
+            if (_currentToken.TokenType == PerlToken.ASSIGN)
+            {
+                Eat(PerlToken.ASSIGN);
+                ASTNode value = Expr();
+                foreach (var param in parameters)
+                {
+                    if (param is VariableDeclarationNode declaration)
+                    {
+                        declaration.Value = value;
+                    }
+                }
+            }
+
+            Eat(PerlToken.LBRACE);
+            ASTNode body = ParseBlock();
+            Eat(PerlToken.RBRACE);
+
+            return new FunctionNode(functionName, parameters, body);
+        }
+
+
+        private ASTNode ClassFunctionDeclaration()
+        {
+            Eat(PerlToken.SUB);
+
+            // Parse function name
+            if (_currentToken.TokenType != PerlToken.IDENT)
+            {
+                throw new Exception($"Expected function name, got {_currentToken.TokenType}");
+            }
+            string functionName = _currentToken.Lexeme;
+            Eat(PerlToken.IDENT);
+
+            // Parse parameters
+            List<ASTNode> parameters = new List<ASTNode>();
+            if (_currentToken.TokenType == PerlToken.LPAREN)
+            {
+                Eat(PerlToken.LPAREN);
+                while (_currentToken.TokenType != PerlToken.RPAREN)
+                {
+                    if (_currentToken.TokenType == PerlToken.MY)
+                    {
+                        Eat(PerlToken.MY);
                         string paramName = _currentToken.Lexeme;
                         Eat(PerlToken.IDENT);
                         parameters.Add(new VariableDeclarationNode("my", paramName, null));
@@ -627,11 +937,45 @@ namespace MTRAN.Parser
                 Eat(PerlToken.RPAREN);
             }
 
+            // Parse function body
             Eat(PerlToken.LBRACE);
-            ASTNode body = ParseBlock();
+            List<ASTNode> body = new List<ASTNode>();
+
+            while (_currentToken.TokenType != PerlToken.RBRACE)
+            {
+                if (_currentToken.TokenType == PerlToken.MY)
+                {
+                    // Handle variable declarations
+                    body.Add(Assignment());
+                }
+                else if (_currentToken.TokenType == PerlToken.PRINT)
+                {
+                    // Handle print statements
+                    body.Add(PrintStatement());
+                }
+                else if (_currentToken.TokenType == PerlToken.BLESS)
+                {
+                    // Handle bless statements
+                    Eat(PerlToken.BLESS);
+                    ASTNode objectNode = Expr();
+                    Eat(PerlToken.COMMA);
+                    ASTNode classNode = Expr();
+                    body.Add(new BlessNode(objectNode, classNode));
+                }
+                else if (_currentToken.TokenType == PerlToken.RETURN)
+                {
+                    // Handle return statements
+                    body.Add(ReturnStatement());
+                }
+                else
+                {
+                    // Handle other statements
+                    body.Add(ParseStatement());
+                }
+            }
             Eat(PerlToken.RBRACE);
 
-            return new FunctionNode(functionName, parameters, body);
+            return new FunctionNode(functionName, parameters, new BlockNode(body));
         }
     }
 }

@@ -1,3 +1,56 @@
+sub check_age($age) {
+    if ($age < 18) {
+        for (my $i = 1; $i <= 5; $i++) {
+            my $name = "Alice";
+        }
+        return "young";
+    } elsif ($age < 65) {
+        return "adult";
+    } else {
+        return "pensioner";
+    }
+}
+
+my $age = check_age(10);
+
+print "Hello";
+
+
+sub student_data
+{
+ 
+    # shift will take package name 'student' 
+    # and assign it to variable 'class'
+    my $class_name = shift;
+    
+  
+    # returning object from constructor
+    return $self;
+}
+ 
+# Object creating and constructor calling
+# my $Data = new student_data student("Geeks","forGeeks");
+
+
+package Person;
+
+
+sub func {
+   my $class = shift;
+   my $self = (
+      _firstName => shift,
+      _lastName  => shift,
+      _ssn       => shift,
+   );
+   # Print all the values just for clarification.
+   print "First Name is";
+   print "Last Name is";
+   print "SSN is";
+   bless $self, $class;
+   return $self;
+}
+
+
 my $c = 1 * 22 + 10;
 my $name = "Alice";
 

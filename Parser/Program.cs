@@ -192,17 +192,36 @@ namespace MTRAN.Parser
                 Console.WriteLine(prefix + "Unary Operation (" + unaryOp.Operator + "):");
                 Console.WriteLine(prefix + "├── │   Variable: " + unaryOp.Variable);
             }
+            else if (node is GroupedAssignmentNode groupedAssignment)
+            {
+                Console.WriteLine(prefix + "Declaration:");
+                Console.WriteLine(prefix + "├── Keyword: my");
+                Console.WriteLine(prefix + "├── Variables:");
+                foreach (var groupedVariable in groupedAssignment.Variables) // Renamed 'variable' to 'groupedVariable'
+                {
+                    Console.WriteLine(prefix + "│   ├── Variable: " + ((VariableNode)groupedVariable).Name);
+                }
+                Console.WriteLine(prefix + "├── Value:");
+                PrintAST(groupedAssignment.Value, indent + 8, prefix + "│   ");
+            }
             else if (node is FunctionNode functionNode)
             {
                 Console.WriteLine(prefix + "Function:");
-                Console.WriteLine(prefix + "├── │   Name: " + functionNode.Name);
-                Console.WriteLine(prefix + "├── │   Parameters:");
+                Console.WriteLine(prefix + "├── Name: " + functionNode.Name);
+                Console.WriteLine(prefix + "├── Parameters:");
                 foreach (var parameter in functionNode.Parameters)
                 {
-                    PrintAST(parameter, indent + 8, prefix + "├── │   │ ");
+                    if (parameter is VariableDeclarationNode declaration1)
+                    {
+                        Console.WriteLine(prefix + "│   ├── Variable: " + declaration1.Variable);
+                    }
+                    else if (parameter is VariableNode variable1)
+                    {
+                        Console.WriteLine(prefix + "│   ├── Variable: " + variable1.Name);
+                    }
                 }
-                Console.WriteLine(prefix + "├── │   Body:");
-                PrintAST(functionNode.Body, indent + 8, prefix + "├── │   │ ");
+                Console.WriteLine(prefix + "├── Body:");
+                PrintAST(functionNode.Body, indent + 8, prefix + "│   ");
             }
             else if (node is ParameterNode parameterNode)
             {
@@ -232,6 +251,16 @@ namespace MTRAN.Parser
             {
                 Console.WriteLine(prefix + "Punctuation: " + punctuationNode.Punctuation);
             }
+            else if (node is FunctionCallNode functionCall)
+            {
+                Console.WriteLine(prefix + "Function Call:");
+                Console.WriteLine(prefix + "├── Function Name: " + functionCall.FunctionName);
+                Console.WriteLine(prefix + "├── Arguments:");
+                foreach (var argument in functionCall.Arguments)
+                {
+                    PrintAST(argument, indent + 4, prefix + "│   ");
+                }
+            }
             else if (node is HashNode hashNode)
             {
                 Console.WriteLine(prefix + "Hash:");
@@ -241,6 +270,31 @@ namespace MTRAN.Parser
                     PrintAST(key, indent + 8, prefix + "├── │   │   ");
                     Console.WriteLine(prefix + "├── │   Value:");
                     PrintAST(value, indent + 8, prefix + "├── │   │ ");
+                }
+            }
+            else if (node is PrintStatementNode printStatement)
+            {
+                Console.WriteLine(prefix + "Print Statement:");
+                foreach (var argument in printStatement.Arguments)
+                {
+                    PrintAST(argument, indent + 4, prefix + "├── ");
+                }
+            }
+            else if (node is BlessNode blessNode)
+            {
+                Console.WriteLine(prefix + "Bless:");
+                Console.WriteLine(prefix + "├── Object: ");
+                PrintAST(blessNode.Object, indent + 4, prefix + "│   ");
+                Console.WriteLine(prefix + "└── Class: ");
+                PrintAST(blessNode.Class, indent + 4, prefix + "    ");
+            }
+            else if (node is ClassNode classNode)
+            {
+                Console.WriteLine(prefix + "Package:");
+                Console.WriteLine(prefix + "└── Name: " + classNode.ClassName);
+                foreach (var method in classNode.Methods)
+                {
+                    PrintAST(method, indent + 4, prefix + "    ");
                 }
             }
         }
@@ -256,3 +310,65 @@ namespace MTRAN.Parser
         }
     }
 }
+
+
+// using System;
+// using System.IO;
+// using Gtk;
+// using MTRAN.Parser;
+
+// class PerlTokenizer
+// {
+//     [STAThread]
+//     static void Main()
+//     {
+//         Application.Init();
+
+//         // Create a file chooser dialog
+//         FileChooserDialog fileChooser = new FileChooserDialog(
+//             "Select a .txt or .pl file",
+//             null,
+//             FileChooserAction.Open,
+//             "Cancel", ResponseType.Cancel,
+//             "Open", ResponseType.Accept
+//         );
+
+//         // Add filters for file types
+//         FileFilter filter = new FileFilter();
+//         filter.AddPattern("*.txt");
+//         filter.AddPattern("*.pl");
+//         filter.AddPattern("*.*");
+//         fileChooser.Filter = filter;
+
+//         if (fileChooser.Run() == (int)ResponseType.Accept)
+//         {
+//             string filePath = fileChooser.Filename;
+
+//             try
+//             {
+//                 // Read the file content
+//                 string fileContent = File.ReadAllText(filePath);
+//                 Console.WriteLine("File content successfully read:\n" + fileContent);
+
+//                 // Process the file content
+//                 var lexer = new PerlLexer(fileContent);
+//                 var tokens = lexer.Tokenize();
+//                 lexer.PrintTokens();
+
+//                 // Save the modified code
+//                 lexer.SaveModifiedCode("modified_variables.pl");
+//             }
+//             catch (Exception ex)
+//             {
+//                 Console.WriteLine($"Error reading file: {ex.Message}");
+//             }
+//         }
+//         else
+//         {
+//             Console.WriteLine("No file selected.");
+//         }
+
+//         fileChooser.Destroy();
+//         Application.Quit();
+//     }
+// }

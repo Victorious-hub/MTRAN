@@ -95,14 +95,18 @@ namespace MTRAN.Parser
         FUNC_SUB,           // sub(func declaration)
         USE,                // use
 
-        HASH_ASSIGN               //: '=>' ;
-
+        HASH_ASSIGN   ,            //: '=>' ;
+        BLESS,
+        NEW,
+        SHIFT
     }
     
     public class TokenDictionary
     {
         public readonly Dictionary<PerlToken, string> KeywordPatterns = new()
         {
+            { PerlToken.BLESS, @"\bbless\b" },                        // my (e.g., my)
+            { PerlToken.NEW, @"\bnew\b" },                        // my (e.g., my)
             { PerlToken.MY, @"\bmy\b" },                        // my (e.g., my)
             { PerlToken.IF, @"\bif\b" },                        // if (e.g., if)
             { PerlToken.ELSE, @"\belse\b" },                    // else (e.g., else)
@@ -125,6 +129,8 @@ namespace MTRAN.Parser
             // { PerlToken.COMMENT, @"#.*" },                      // comment (single line)
             
             /* Special tokens */
+            { PerlToken.SHIFT, @"\bshift\b" },                        // my (e.g., my)
+            { PerlToken.NEW, @"\new\b" },                        // my (e.g., my)
             { PerlToken.IDENT, @"[\$@%][a-zA-Z_]\w*" },                // variable (e.g., $a, $var_name)
 
             { PerlToken.EQUAL, @"==" },                         // equality (e.g., ==)

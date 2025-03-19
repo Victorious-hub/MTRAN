@@ -301,4 +301,74 @@ namespace MTRAN.Parser
         }
     }
 
+    public class GroupedAssignmentNode : ASTNode
+    {
+        public List<ASTNode> Variables { get; }
+        public ASTNode Value { get; }
+
+        public GroupedAssignmentNode(List<ASTNode> variables, ASTNode value)
+        {
+            Variables = variables;
+            Value = value;
+        }
+    }
+
+    public class PrintStatementNode : ASTNode
+    {
+        public List<ASTNode> Arguments { get; }
+
+        public PrintStatementNode(List<ASTNode> arguments)
+        {
+            Arguments = arguments;
+        }
+    }
+
+    public class FunctionCallNode : ASTNode
+    {
+        public string FunctionName { get; }
+        public List<ASTNode> Arguments { get; }
+
+        public FunctionCallNode(string functionName, List<ASTNode> arguments)
+        {
+            FunctionName = functionName;
+            Arguments = arguments;
+        }
+    }
+
+    public class ClassNode : ASTNode
+    {
+        public string ClassName { get; }
+        public List<ASTNode> Methods { get; }
+
+        public ClassNode(string className, List<ASTNode> methods)
+        {
+            ClassName = className;
+            Methods = methods;
+        }
+
+    }
+
+    public class BlessNode : ASTNode
+    {
+        public ASTNode Object { get; }
+        public ASTNode Class { get; }
+
+        public BlessNode(ASTNode obj, ASTNode cls)
+        {
+            Object = obj;
+            Class = cls;
+        }
+
+    }
+
+    public class KeywordNode : ASTNode
+    {
+        public string Keyword { get; }
+
+        public KeywordNode(string keyword)
+        {
+            Keyword = keyword;
+        }
+
+    }
 }
