@@ -8,6 +8,7 @@ namespace MTRAN.Parser
         private readonly PerlLexer _lexer;
         private Token _currentToken;
         private int _currentTokenIndex;
+        private Stack<PerlToken> _parenStack = new Stack<PerlToken>();
 
         public Parser(PerlLexer lexer)
         {
@@ -16,10 +17,36 @@ namespace MTRAN.Parser
             _currentToken = _lexer.tokens[_currentTokenIndex];
         }
 
+        private void LogError(string message)
+        {
+            string errorFilePath = "/home/shyskov/Documents/libs/sem6/MTRAN/Parser/parse_errors.log";
+            string errorMessage = $"{DateTime.Now}: {message} at line {_currentToken.Line}.";
+            Console.WriteLine(errorMessage);
+            using (StreamWriter writer = new StreamWriter(errorFilePath, append: true))
+            {
+                writer.WriteLine(errorMessage);
+            }
+        }
+
         private void Eat(PerlToken tokenType)
         {
             if (_currentToken.TokenType == tokenType)
             {
+                // Track parentheses
+                if (tokenType == PerlToken.LPAREN)
+                {
+                    _parenStack.Push(tokenType);
+                }
+                else if (tokenType == PerlToken.RPAREN)
+                {
+                    if (_parenStack.Count == 0 || _parenStack.Peek() != PerlToken.LPAREN)
+                    {
+                        LogError($"Unmatched closing parenthesis at index {_currentTokenIndex}");
+                        throw new Exception($"Unmatched closing parenthesis at index {_currentTokenIndex}");
+                    }
+                    _parenStack.Pop();
+                }
+
                 _currentTokenIndex++;
                 if (_currentTokenIndex < _lexer.tokens.Count)
                 {
@@ -28,7 +55,8 @@ namespace MTRAN.Parser
             }
             else
             {
-                throw new Exception($"Expected token {tokenType}, got {_currentToken.TokenType}");
+                LogError($"Expected token {tokenType}, got {_currentToken.TokenType} at index {_currentTokenIndex}");
+                throw new Exception($"Expected token {tokenType}, got {_currentToken.TokenType} at index {_currentTokenIndex}");
             }
         }
 
@@ -150,8 +178,9 @@ namespace MTRAN.Parser
             }
             else
             {
-                Console.WriteLine(token.TokenType);
-                throw new Exception("Invalid factor");
+                string errorMessage = $"Invalid factor: unexpected token '{token.TokenType}' at line {_currentToken.Line}.";
+                LogError(errorMessage);
+                throw new Exception(errorMessage);
             }
         }
 
@@ -355,6 +384,10 @@ namespace MTRAN.Parser
                     }
                     // throw new Exception("Unexpected token after statement");
                 }
+                // else
+                // {
+                //     LogError("Unclosed block: missing '}'");
+                // }
             }
 
             return new BlockNode(statements);
@@ -411,6 +444,8 @@ namespace MTRAN.Parser
             // Parse class name
             if (_currentToken.TokenType != PerlToken.IDENT)
             {
+                string errorMessage = $"Expected class name, got '{_currentToken.TokenType}' at line {_currentToken.Line}.";
+                LogError(errorMessage);
                 throw new Exception($"Expected class name, got {_currentToken.TokenType}");
             }
             string className = _currentToken.Lexeme;
@@ -453,7 +488,14 @@ namespace MTRAN.Parser
 
         public ASTNode Parse()
         {
-            return ParseBlock();
+            ASTNode root = ParseBlock();
+
+            if (_parenStack.Count > 0)
+            {
+                // throw new Exception("Unclosed parenthesis detected.");
+            }
+
+            return root;
         }
 
         private ASTNode Assignment()
@@ -501,47 +543,6 @@ namespace MTRAN.Parser
                 }
             }
 
-            // if (_currentToken.TokenType == PerlToken.IDENT)
-            // {
-            //     Token variableToken = _currentToken;
-            //     Eat(PerlToken.IDENT);
-
-            //     if (_currentToken.TokenType == PerlToken.ASSIGN)
-            //     {
-            //         Eat(PerlToken.ASSIGN);
-
-            //         if (_currentToken.TokenType == PerlToken.LPAREN)
-            //         {
-            //             // Handle hash declarations
-            //             ASTNode hash = ParseHash();
-            //             if (isDeclaration)
-            //             {
-            //                 return new VariableDeclarationNode(keyword, variableToken.Lexeme, hash);
-            //             }
-            //             else
-            //             {
-            //                 return new AssignmentNode(variableToken.Lexeme, hash);
-            //             }
-            //         }
-            //         else
-            //         {
-            //             // Handle regular assignments
-            //             ASTNode value = Expr();
-            //             if (isDeclaration)
-            //             {
-            //                 return new VariableDeclarationNode(keyword, variableToken.Lexeme, value);
-            //             }
-            //             else
-            //             {
-            //                 return new AssignmentNode(variableToken.Lexeme, value);
-            //             }
-            //         }
-            //     }
-            //     else
-            //     {
-            //         throw new Exception($"Expected token ASSIG1111N, got {_currentToken.TokenType}");
-            //     }
-            // }
             
             if (_currentToken.TokenType == PerlToken.IDENT && _currentToken.Lexeme.StartsWith("@"))
             {
