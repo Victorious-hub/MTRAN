@@ -1,33 +1,3 @@
-# # package Person;
-
-# package Person;
-
-# sub new1 {
-#     my $class = shift;
-#     my $self = (
-#         _firstName => shift,
-#         _lastName  => shift,
-#         _ssn       => shift,
-#     );
-#     bless $self, $class;
-#     return $self;
-
-
-# # sub func {
-# #    my $class = shift;
-# #    my $self = (
-# #       _firstName => shift,
-# #       _lastName  => shift,
-# #       _ssn       => shift,
-# #    );
-# #    # Print all the values just for clarification.
-# #    print "First Name is";
-# #    print "Last Name is";
-# #    print "SSN is";
-# #    bless $self, $class;
-# #    return $self;
-# # }
-
 my $adult = 10 + 5;
 
 $age = 1 * (2 ^ 4);
@@ -64,4 +34,4 @@ while (10 == 9 && 1 ^ 2) {
     $counter++;
 }
 
-# my $a = 1 + 2);
+$a = (1 + 2) * 2;

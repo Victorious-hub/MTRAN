@@ -348,6 +348,16 @@ namespace MTRAN.Parser
 
     }
 
+    public class ProgramNode : ASTNode
+    {
+        public List<ASTNode> Children { get; }
+
+        public ProgramNode(List<ASTNode> children)
+        {
+            Children = children;
+        }
+    }
+
     public class BlessNode : ASTNode
     {
         public ASTNode Object { get; }
