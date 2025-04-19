@@ -50,6 +50,7 @@ namespace MTRAN.Semantic
                     Console.WriteLine("Semantic analysis completed successfully.");
                     Console.WriteLine("\nSemantic Tree:");
                     semanticAnalyzer.PrintSymbolTable();
+                    semanticAnalyzer.ReportErrors();   // Print all semantic errors
                 }
                 catch (Exception ex)
                 {

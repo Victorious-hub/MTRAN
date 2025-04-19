@@ -202,6 +202,18 @@ namespace MTRAN.Semantic
         }
     }
 
+    public class ObjectNode : ASTNode
+    {
+        public string Name { get; }
+        public List<(ASTNode Key, ASTNode Value)> Properties { get; }
+
+        public ObjectNode(string name, List<(ASTNode Key, ASTNode Value)> properties)
+        {
+            Name = name;
+            Properties = properties;
+        }
+    }
+
     public class UnaryOperationNode : ASTNode
     {
         public string Variable { get; }
@@ -251,20 +263,20 @@ namespace MTRAN.Semantic
     }
 
     public class FunctionNode : ASTNode
-{
-    public string Name { get; }
-    public List<ASTNode> Parameters { get; }
-    public ASTNode Body { get; }
-
-    public FunctionNode(string name, List<ASTNode> parameters, ASTNode body)
     {
-        Name = name;
-        Parameters = parameters;
-        Body = body;
+        public string Name { get; }
+        public List<ASTNode> Parameters { get; }
+        public ASTNode Body { get; }
+
+        public FunctionNode(string name, List<ASTNode> parameters, ASTNode body)
+        {
+            Name = name;
+            Parameters = parameters;
+            Body = body;
+        }
+
+
     }
-
-
-}
 
     public class ArrayNode : ASTNode
     {

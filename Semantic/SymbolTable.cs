@@ -1,74 +1,168 @@
 namespace MTRAN.Semantic
 {
     public class SymbolTable
-{
-    private readonly Dictionary<string, Dictionary<string, string>> _scopes = new Dictionary<string, Dictionary<string, string>>();
-    private string _currentScope = "Block"; // Default scope is Block
-
-    public void EnterScope(string scopeName)
     {
-        _currentScope = scopeName;
-        if (!_scopes.ContainsKey(scopeName))
+        private readonly Stack<Dictionary<string, string>> _scopes = new Stack<Dictionary<string, string>>();
+        private readonly Stack<string> _scopeNames = new Stack<string>(); // Track scope names
+        private readonly Dictionary<string, int> _functions = new Dictionary<string, int>(); // Function name and parameter count
+        private readonly Dictionary<string, string> _symbols = new Dictionary<string, string>(); // Global symbols (e.g., classes)
+        private readonly List<(string ScopeName, Dictionary<string, string> Variables)> _reservedScopes = new List<(string, Dictionary<string, string>)>();
+
+        public void DeclareClass(string className)
         {
-            _scopes[scopeName] = new Dictionary<string, string>();
-        }
-        Console.WriteLine($"[DEBUG] Entered scope: {scopeName}");
-    }
-
-    public void ExitScope()
-    {
-        Console.WriteLine($"[DEBUG] Exited scope: {_currentScope}");
-        _currentScope = "Block"; // Reset to default Block scope after exiting
-    }
-
-    public void DeclareVariable(string variable, string type)
-    {
-        if (_scopes[_currentScope].ContainsKey(variable))
-        {
-            throw new Exception($"Semantic Error: Variable '{variable}' is already declared in scope '{_currentScope}'.");
-        }
-
-        _scopes[_currentScope][variable] = type;
-        Console.WriteLine($"[DEBUG] Declared variable '{variable}' of type '{type}' in scope '{_currentScope}'.");
-    }
-
-    public string GetVariableType(string variable)
-    {
-        if (_scopes[_currentScope].ContainsKey(variable))
-        {
-            return _scopes[_currentScope][variable];
-        }
-
-        if (_scopes.ContainsKey("Block") && _scopes["Block"].ContainsKey(variable))
-        {
-            return _scopes["Block"][variable];
-        }
-
-        throw new Exception($"Semantic Error: Variable '{variable}' is not declared in scope '{_currentScope}' or default 'Block' scope.");
-    }
-
-    public bool IsVariableDeclared(string variable)
-    {
-        return _scopes[_currentScope].ContainsKey(variable) || 
-               (_scopes.ContainsKey("Block") && _scopes["Block"].ContainsKey(variable));
-    }
-
-    public bool IsCurrentScope(string scopeName)
-    {
-        return _currentScope == scopeName;
-    }
-
-    public void PrintSymbolTable()
-    {
-        Console.WriteLine("Symbol Table:");
-        foreach (var scope in _scopes)
-        {
-            Console.WriteLine($"Scope: {scope.Key}");
-            foreach (var variable in scope.Value)
+            if (!_symbols.ContainsKey(className))
             {
-                Console.WriteLine($"  {variable.Key}: {variable.Value}");
+                _symbols[className] = "class";
+            }
+        }
+        public bool IsClassDeclared(string className)
+        {
+            return _symbols.ContainsKey(className) && _symbols[className] == "class";
+        }
+
+        public SymbolTable()
+        {
+            // Initialize with a global scope
+            _scopes.Push(new Dictionary<string, string>());
+            _scopeNames.Push("Global");
+        }
+
+        public void DeclareFunction(string functionName, int parameterCount)
+        {
+            if (_functions.ContainsKey(functionName))
+            {
+                throw new Exception($"Semantic Error: Function '{functionName}' is already declared.");
+            }
+
+            _functions[functionName] = parameterCount;
+            Console.WriteLine($"[DEBUG] Declared function '{functionName}' with {parameterCount} parameters.");
+        }
+
+        public bool IsFunctionDeclared(string functionName)
+        {
+            return _functions.ContainsKey(functionName);
+        }
+
+        public int GetFunctionParameterCount(string functionName)
+        {
+            if (!_functions.ContainsKey(functionName))
+            {
+                throw new Exception($"Semantic Error: Function '{functionName}' is not declared.");
+            }
+
+            return _functions[functionName];
+        }
+
+        public void EnterScope(string scopeName)
+        {
+            // Save the current scope to _reservedScopes before entering a new scope
+            if (_scopes.Count > 0)
+            {
+                string currentScopeName = _scopeNames.Peek();
+                var currentScopeVariables = new Dictionary<string, string>(_scopes.Peek());
+                _reservedScopes.Add((currentScopeName, currentScopeVariables));
+            }
+
+            // Enter the new scope
+            _scopes.Push(new Dictionary<string, string>());
+            _scopeNames.Push(scopeName);
+            Console.WriteLine($"[DEBUG] Entered scope: {scopeName}");
+        }
+
+        public void PrintAllScopes()
+        {
+            Console.WriteLine("[DEBUG] Current Symbol Table:");
+            int scopeLevel = _scopeNames.Count;
+
+            var scopeNamesArray = _scopeNames.ToArray();
+            var scopesArray = _scopes.ToArray();
+
+            for (int i = scopeLevel - 1; i >= 0; i--)
+            {
+                Console.WriteLine($"Scope Level {scopeLevel - i}: {scopeNamesArray[i]}");
+                foreach (var entry in scopesArray[i])
+                {
+                    Console.WriteLine($"    {entry.Key}: {entry.Value}");
+                }
+            }
+        }
+
+        public void ExitScope()
+        {
+            if (_scopes.Count > 0)
+            {
+                // Save the exited scope to _reservedScopes
+                string exitedScopeName = _scopeNames.Pop();
+                var exitedScopeVariables = _scopes.Pop();
+                _reservedScopes.Add((exitedScopeName, new Dictionary<string, string>(exitedScopeVariables)));
+
+                Console.WriteLine($"[DEBUG] Exited scope: {exitedScopeName}");
+            }
+            else
+            {
+                throw new InvalidOperationException("Cannot exit the global scope.");
+            }
+        }
+
+        public bool IsCurrentScope(string scopeName)
+        {
+            return _scopeNames.Peek() == scopeName;
+        }
+
+        public void DeclareVariable(string variable, string type)
+        {
+            if (_scopes.Peek().ContainsKey(variable))
+            {
+                throw new Exception($"Semantic Error: Variable '{variable}' is already declared in the current scope.");
+            }
+
+            _scopes.Peek()[variable] = type;
+            Console.WriteLine($"[DEBUG] Declared variable '{variable}' of type '{type}' in the current scope.");
+        }
+
+        public void PrintReservedScopes()
+        {
+            Console.WriteLine("[DEBUG] Reserved Scopes:");
+            foreach (var (scopeName, variables) in _reservedScopes)
+            {
+                Console.WriteLine($"Scope: {scopeName}");
+                foreach (var (key, value) in variables)
+                {
+                    Console.WriteLine($"    {key}: {value}");
+                }
+            }
+        }
+
+        public string GetVariableType(string variable)
+        {
+            foreach (var scope in _scopes)
+            {
+                if (scope.ContainsKey(variable))
+                {
+                    return scope[variable];
+                }
+            }
+
+            throw new Exception($"Semantic Error: Variable '{variable}' is not declared in any accessible scope.");
+        }
+
+        public bool IsVariableDeclared(string variable)
+        {
+            return _scopes.Any(scope => scope.ContainsKey(variable));
+        }
+
+        public void PrintSymbolTable()
+        {
+            Console.WriteLine("Symbol Table:");
+            int scopeLevel = _scopes.Count;
+            foreach (var scope in _scopes.Reverse())
+            {
+                Console.WriteLine($"Scope Level {scopeLevel--}:");
+                foreach (var variable in scope)
+                {
+                    Console.WriteLine($"  {variable.Key}: {variable.Value}");
+                }
             }
         }
     }
-}
 }
