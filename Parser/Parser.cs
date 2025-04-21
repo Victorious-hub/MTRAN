@@ -139,7 +139,7 @@ namespace MTRAN.Parser
                 Eat(PerlToken.BLESS);
 
                 // Parse the object being blessed
-                ASTNode obj = Expr();
+                ASTNode obj = Factor(); // This will now handle ObjectNode
 
                 // Optionally, parse the class name (if provided)
                 ASTNode cls = null;
@@ -175,6 +175,41 @@ namespace MTRAN.Parser
             else if (token.TokenType == PerlToken.MY)
             {
                 return Assignment();
+            }
+            else if (_currentToken.TokenType == PerlToken.LBRACE)
+            {
+                // Handle object initialization (e.g., my $self = { key => value, ... })
+                Eat(PerlToken.LBRACE);
+                List<(ASTNode Key, ASTNode Value)> properties = new List<(ASTNode Key, ASTNode Value)>();
+
+                while (_currentToken.TokenType != PerlToken.RBRACE)
+                {
+                    // Parse the key
+                    ASTNode key = Expr();
+
+                    // Expect '=>'
+                    if (_currentToken.TokenType == PerlToken.HASH_ASSIGN)
+                    {
+                        Eat(PerlToken.HASH_ASSIGN);
+                    }
+                    else
+                    {
+                        throw new Exception($"Expected '=>' for object property assignment, got {_currentToken.TokenType} at line {_currentToken.Line}.");
+                    }
+
+                    // Parse the value
+                    ASTNode value = Expr();
+                    properties.Add((key, value));
+
+                    // Handle commas between properties
+                    if (_currentToken.TokenType == PerlToken.COMMA)
+                    {
+                        Eat(PerlToken.COMMA);
+                    }
+                }
+
+                Eat(PerlToken.RBRACE); // Consume the closing brace
+                return new ObjectNode("self", properties); // Return an ObjectNode
             }
             else
             {
@@ -501,7 +536,7 @@ namespace MTRAN.Parser
         private ASTNode Assignment()
         {
             bool isDeclaration = false;
-            string keyword = null;
+            string? keyword = null;
 
             // Check if the statement starts with "my"
             if (_currentToken.TokenType == PerlToken.MY)
@@ -540,6 +575,26 @@ namespace MTRAN.Parser
                 else
                 {
                     throw new Exception($"Expected token ASSIGN, got {_currentToken.TokenType}");
+                }
+            }
+
+            if (_currentToken.TokenType == PerlToken.ILLEGAL)
+            {
+                string errorMessage = $"Invalid variable name '{_currentToken.Lexeme}' at line {_currentToken.Line}. Variable name must not start from number";
+                LogError(errorMessage);
+                throw new Exception(errorMessage);
+            }
+
+            if (_currentToken.TokenType == PerlToken.IDENT)
+            {
+                string variableName = _currentToken.Lexeme;
+
+                // Validate variable name starts with $, @, or %
+                if (!variableName.StartsWith("$") && !variableName.StartsWith("@") && !variableName.StartsWith("%"))
+                {
+                    string errorMessage = $"Invalid variable name '{variableName}' at line {_currentToken.Line}. Variable names must start with $, @, or %.";
+                    LogError(errorMessage);
+                    throw new Exception(errorMessage);
                 }
             }
 

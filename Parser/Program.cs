@@ -60,7 +60,12 @@ namespace MTRAN.Parser
                 prefix = "├── ";
             }
 
-            if (node is StatementListNode statementList)
+            if (node is ErrorNode errorNode)
+            {
+                Console.WriteLine(prefix + "Error:");
+                Console.WriteLine(prefix + "├── Message: " + errorNode.ErrorMessage);
+            }
+            else if (node is StatementListNode statementList)
             {
                 foreach (var statement in statementList.Statements)
                 {
@@ -295,6 +300,20 @@ namespace MTRAN.Parser
                 foreach (var method in classNode.Methods)
                 {
                     PrintAST(method, indent + 4, prefix + "    ");
+                }
+            }
+            else if (node is ObjectNode objectNode)
+            {
+                Console.WriteLine(prefix + "Object:");
+                Console.WriteLine(prefix + "├── Name: " + objectNode.Name);
+
+                foreach (var (key, value) in objectNode.Properties)
+                {
+                    Console.WriteLine(prefix + "├── Property:");
+                    Console.WriteLine(prefix + "│   ├── Key:");
+                    PrintAST(key, indent + 8, prefix + "│   │   ");
+                    Console.WriteLine(prefix + "│   └── Value:");
+                    PrintAST(value, indent + 8, prefix + "│       ");
                 }
             }
         }

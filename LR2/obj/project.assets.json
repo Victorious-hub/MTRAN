@@ -8,19 +8,19 @@
     "net8.0-windows7.0": []
   },
   "packageFolders": {
-    "C:\\Users\\datan\\.nuget\\packages\\": {}
+    "/home/shyskov/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\datan\\OneDrive\\Рабочий стол\\MTRAN\\LR2\\LR2.csproj",
+      "projectUniqueName": "/home/shyskov/Documents/libs/sem6/MTRAN/LR2/LR2.csproj",
       "projectName": "LR2",
-      "projectPath": "C:\\Users\\datan\\OneDrive\\Рабочий стол\\MTRAN\\LR2\\LR2.csproj",
-      "packagesPath": "C:\\Users\\datan\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\datan\\OneDrive\\Рабочий стол\\MTRAN\\LR2\\obj\\",
+      "projectPath": "/home/shyskov/Documents/libs/sem6/MTRAN/LR2/LR2.csproj",
+      "packagesPath": "/home/shyskov/.nuget/packages/",
+      "outputPath": "/home/shyskov/Documents/libs/sem6/MTRAN/LR2/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\datan\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "/home/shyskov/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0-windows"
@@ -38,11 +38,6 @@
         "warnAsError": [
           "NU1605"
         ]
-      },
-      "restoreAuditProperties": {
-        "enableAudit": "true",
-        "auditLevel": "low",
-        "auditMode": "direct"
       }
     },
     "frameworks": {
@@ -62,12 +57,9 @@
         "frameworkReferences": {
           "Microsoft.NETCore.App": {
             "privateAssets": "all"
-          },
-          "Microsoft.WindowsDesktop.App.WindowsForms": {
-            "privateAssets": "none"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.405/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/8.0.114/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

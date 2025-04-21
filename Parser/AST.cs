@@ -348,6 +348,33 @@ namespace MTRAN.Parser
 
     }
 
+    public class ObjectNode : ASTNode
+    {
+        public string Name { get; }
+        public List<(ASTNode Key, ASTNode Value)> Properties { get; }
+
+        public ObjectNode(string name, List<(ASTNode Key, ASTNode Value)> properties)
+        {
+            Name = name;
+            Properties = properties;
+        }
+    }
+
+    public class ErrorNode : ASTNode
+    {
+        public string ErrorMessage { get; }
+
+        public ErrorNode(string errorMessage)
+        {
+            ErrorMessage = errorMessage;
+        }
+
+        public override string ToString()
+        {
+            return $"Error: {ErrorMessage}";
+        }
+    }
+
     public class ProgramNode : ASTNode
     {
         public List<ASTNode> Children { get; }
