@@ -63,7 +63,35 @@ namespace MTRAN.Parser
         private ASTNode Factor()
         {
             Token token = _currentToken;
+            
 
+            if (token.TokenType == PerlToken.USE)
+            {
+                Eat(PerlToken.USE);
+
+                // Parse the constant or module name
+                if (_currentToken.TokenType != PerlToken.IDENT)
+                {
+                    throw new Exception($"Expected identifier after 'use', got {_currentToken.TokenType} at line {_currentToken.Line}.");
+                }
+                string constantName = _currentToken.Lexeme;
+                Eat(PerlToken.IDENT);
+
+                // Expect the hash assignment operator (=>)
+                if (_currentToken.TokenType == PerlToken.HASH_ASSIGN)
+                {
+                    Eat(PerlToken.HASH_ASSIGN);
+                }
+                else
+                {
+                    throw new Exception($"Expected '=>' after constant name, got {_currentToken.TokenType} at line {_currentToken.Line}.");
+                }
+
+                // Parse the value assigned to the constant
+                ASTNode value = Expr();
+
+                return new UseNode(constantName, value); // Return a UseNode
+            }
             if (token.TokenType == PerlToken.NUMBER)
             {
                 Eat(PerlToken.NUMBER);
@@ -78,6 +106,40 @@ namespace MTRAN.Parser
             {
                 string functionName = token.Lexeme;
                 Eat(PerlToken.IDENT);
+
+                if (_currentToken.TokenType == PerlToken.LBRACKET)
+                {
+                    Eat(PerlToken.LBRACKET);
+                    ASTNode index = Expr(); // Parse the index expression
+                    Eat(PerlToken.RBRACKET);
+
+                    // Check if this is an array element assignment
+                    if (_currentToken.TokenType == PerlToken.ASSIGN)
+                    {
+                        Eat(PerlToken.ASSIGN);
+                        ASTNode value = Expr(); // Parse the value being assigned
+                        return new ArrayElementAssignmentNode(functionName, index, value); // Return an ArrayElementAssignmentNode
+                    }
+
+                    return new ArrayAccessNode(functionName, index); // Return an ArrayAccessNode for access
+                }
+
+                if (_currentToken.TokenType == PerlToken.LBRACE)
+                {
+                    Eat(PerlToken.LBRACE);
+                    ASTNode key = Expr(); // Parse the key inside the braces
+                    Eat(PerlToken.RBRACE);
+
+                    // Check if this is a hash element assignment
+                    if (_currentToken.TokenType == PerlToken.ASSIGN)
+                    {
+                        Eat(PerlToken.ASSIGN);
+                        ASTNode value = Expr(); // Parse the value being assigned
+                        return new HashElementAssignmentNode(functionName, key, value); // Return a HashElementAssignmentNode
+                    }
+
+                    return new HashAccessNode(functionName, key); // Return a HashAccessNode for access
+                }
 
                 // Check if this is a function call
                 if (_currentToken.TokenType == PerlToken.LPAREN)
@@ -360,7 +422,7 @@ namespace MTRAN.Parser
             {
                 Eat(PerlToken.ELSIF);
                 Eat(PerlToken.LPAREN);
-                ASTNode elseIfCondition = Expr();
+                ASTNode elseIfCondition = new ParenthesizedExpression(Expr());
                 Eat(PerlToken.RPAREN);
                 Eat(PerlToken.LBRACE);
                 ASTNode elseIfThenBranch = ParseBlock();
@@ -545,6 +607,9 @@ namespace MTRAN.Parser
                 isDeclaration = true;
                 keyword = "my";
             }
+
+        
+
 
             if (_currentToken.TokenType == PerlToken.LPAREN)
             {

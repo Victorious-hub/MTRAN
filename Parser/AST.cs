@@ -62,6 +62,30 @@ namespace MTRAN.Parser
         }
     }
 
+    public class ArrayAccessNode : ASTNode
+    {
+        public string ArrayName { get; }
+        public ASTNode Index { get; }
+
+        public ArrayAccessNode(string arrayName, ASTNode index)
+        {
+            ArrayName = arrayName;
+            Index = index;
+        }
+    }
+
+    public class HashAccessNode : ASTNode
+    {
+        public string HashName { get; }
+        public ASTNode Key { get; }
+
+        public HashAccessNode(string hashName, ASTNode key)
+        {
+            HashName = hashName;
+            Key = key;
+        }
+    }
+
     public class ElseIfNode : ASTNode
     {
         public ASTNode Condition { get; }
@@ -71,6 +95,56 @@ namespace MTRAN.Parser
         {
             Condition = condition;
             ThenBranch = thenBranch;
+        }
+    }
+
+    public class InterpolatedStringNode : ASTNode
+    {
+        public List<ASTNode> Parts { get; }
+
+        public InterpolatedStringNode(List<ASTNode> parts)
+        {
+            Parts = parts;
+        }
+    }
+
+    public class UseNode : ASTNode
+    {
+        public string ConstantName { get; }
+        public ASTNode Value { get; }
+
+        public UseNode(string constantName, ASTNode value)
+        {
+            ConstantName = constantName;
+            Value = value;
+        }
+    }
+
+    public class ArrayElementAssignmentNode : ASTNode
+    {
+        public string ArrayName { get; }
+        public ASTNode Index { get; }
+        public ASTNode Value { get; }
+
+        public ArrayElementAssignmentNode(string arrayName, ASTNode index, ASTNode value)
+        {
+            ArrayName = arrayName;
+            Index = index;
+            Value = value;
+        }
+    }
+
+    public class HashElementAssignmentNode : ASTNode
+    {
+        public string HashName { get; }
+        public ASTNode Key { get; }
+        public ASTNode Value { get; }
+
+        public HashElementAssignmentNode(string hashName, ASTNode key, ASTNode value)
+        {
+            HashName = hashName;
+            Key = key;
+            Value = value;
         }
     }
 

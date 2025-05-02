@@ -34,9 +34,11 @@ namespace MTRAN.Parser
 
                     var lexer = new PerlLexer(fileContent);
                     lexer.Tokenize();
+                    // lexer.PrintUniqueTokens();
                     var parser = new Parser(lexer);
                     ASTNode ast = parser.Parse();
                     PrintAST(ast, 0, "Program");
+
                 }
                 catch (Exception ex)
                 {
@@ -57,7 +59,7 @@ namespace MTRAN.Parser
             if (prefix == "Program")
             {
                 Console.WriteLine(prefix);
-                prefix = "├── ";
+                prefix = "  ";
             }
 
             if (node is ErrorNode errorNode)
@@ -72,6 +74,35 @@ namespace MTRAN.Parser
                     PrintAST(statement, indent, prefix);
                 }
             }
+            else if (node is HashAccessNode hashAccessNode)
+            {
+                Console.WriteLine(prefix + "Hash Access:");
+                Console.WriteLine(prefix + "    Hash Name: " + hashAccessNode.HashName);
+                Console.WriteLine(prefix + "    Key:");
+                PrintAST(hashAccessNode.Key, indent + 4, prefix + "        ");
+            }
+            else if (node is UseNode useNode)
+            {
+                Console.WriteLine($"{prefix}Use Statement:");
+                Console.WriteLine($"{prefix}  Constant Name: {useNode.ConstantName}");
+                Console.WriteLine($"{prefix}  Value:");
+                PrintAST(useNode.Value, indent + 2, prefix + "    ");
+            }
+            else if (node is InterpolatedStringNode interpolatedStringNode)
+            {
+                Console.WriteLine($"{prefix}Interpolated String:");
+                foreach (var part in interpolatedStringNode.Parts)
+                {
+                    PrintAST(part, indent + 2, prefix + "    ");
+                }
+            }
+            else if (node is ArrayAccessNode arrayAccessNode)
+            {
+                Console.WriteLine(prefix + "Array Access:");
+                Console.WriteLine(prefix + "    Array Name: " + arrayAccessNode.ArrayName);
+                Console.WriteLine(prefix + "    Index:");
+                PrintAST(arrayAccessNode.Index, indent + 4, prefix + "        ");
+            }
             else if (node is BlockNode block)
             {
                 // Console.WriteLine(prefix + "Block:");
@@ -83,34 +114,34 @@ namespace MTRAN.Parser
             else if (node is VariableDeclarationNode declaration)
             {
                 Console.WriteLine(prefix + "Declaration:");
-                Console.WriteLine(prefix + "├── │ Keyword: " + declaration.Keyword);
-                Console.WriteLine(prefix + "├── │ Variable: " + declaration.Variable);
+                Console.WriteLine(prefix + "      Keyword: " + declaration.Keyword);
+                Console.WriteLine(prefix + "      Variable: " + declaration.Variable);
 
                 if (declaration.Value is CompoundAssignmentNode compoundAssignment)
                 {
-                    Console.WriteLine(prefix + "├── │ Assignment (" + compoundAssignment.OperatorSymbol + "):");
-                    PrintAST(compoundAssignment.Value, indent + 8, prefix + "├── │   │ ");
+                    Console.WriteLine(prefix + "      Assignment (" + compoundAssignment.OperatorSymbol + "):");
+                    PrintAST(compoundAssignment.Value, indent + 8, prefix + "          ");
                 }
                 else if (declaration.Value != null)
                 {
-                    Console.WriteLine(prefix + "├── │ Assignment (=):");
-                    PrintAST(declaration.Value, indent + 8, prefix + "├── │   │ ");
+                    Console.WriteLine(prefix + "      Assignment (=):");
+                    PrintAST(declaration.Value, indent + 8, prefix + "          ");
                 }
                 // Console.WriteLine(prefix + "├── │   Punctuation: ;");
             }
             else if (node is AssignmentNode assignment)
             {
                 Console.WriteLine(prefix + "Assignment (=):");
-                Console.WriteLine(prefix + "├── │ Variable: " + assignment.Variable);
-                Console.WriteLine(prefix + "├── │ Value:");
-                PrintAST(assignment.Value, indent + 8, prefix + "├── │ ");
+                Console.WriteLine(prefix + "      Variable: " + assignment.Variable);
+                Console.WriteLine(prefix + "      Value:");
+                PrintAST(assignment.Value, indent + 8, prefix + "      ");
             }
             else if (node is CompoundAssignmentNode compoundAssignment)
             {
                 Console.WriteLine(prefix + "Compound Assignment (" + compoundAssignment.OperatorSymbol + "):");
-                Console.WriteLine(prefix + "├── │ Variable: " + compoundAssignment.Variable);
-                Console.WriteLine(prefix + "├── │ Value:");
-                PrintAST(compoundAssignment.Value, indent + 8, prefix + "├── │ ");
+                Console.WriteLine(prefix + "      Variable: " + compoundAssignment.Variable);
+                Console.WriteLine(prefix + "      Value:");
+                PrintAST(compoundAssignment.Value, indent + 8, prefix + "      ");
             }
             else if (node is BinaryOperationNode binaryOp)
             {
@@ -130,103 +161,103 @@ namespace MTRAN.Parser
                 }
 
                 Console.WriteLine(prefix + operatorType + " (" + binaryOp.Operator + "):");
-                Console.WriteLine(prefix + "├── │ Left:");
-                PrintAST(binaryOp.Left, indent + 8, prefix + "├── │ ");
-                Console.WriteLine(prefix + "├── │ Right:");
-                PrintAST(binaryOp.Right, indent + 8, prefix + "├── │ ");
+                Console.WriteLine(prefix + "      Left:");
+                PrintAST(binaryOp.Left, indent + 8, prefix + "      ");
+                Console.WriteLine(prefix + "      Right:");
+                PrintAST(binaryOp.Right, indent + 8, prefix + "      ");
             }
             else if (node is NumberNode number)
             {
-                Console.WriteLine(prefix + "├── | Literal: " + number.Value);
+                Console.WriteLine(prefix + "      Literal: " + number.Value);
             }
             else if (node is StringNode str)
             {
-                Console.WriteLine(prefix + "├── │ Literal: \"" + str.Value + "\"");
+                Console.WriteLine(prefix + "      Literal: \"" + str.Value + "\"");
             }
             else if (node is VariableNode variable)
             {
-                Console.WriteLine(prefix + "├── │ Variable: " + variable.Name);
+                Console.WriteLine(prefix + "      Variable: " + variable.Name);
             }
             else if (node is IfNode ifNode)
             {
                 Console.WriteLine(prefix + "If:");
-                Console.WriteLine(prefix + "├── │ Condition:");
-                PrintAST(ifNode.Condition, indent + 8, prefix + "├── │   │ ");
-                Console.WriteLine(prefix + "├── │ Body:");
-                PrintAST(ifNode.ThenBranch, indent + 8, prefix + "├── │   │ ");
+                Console.WriteLine(prefix + "      Condition:");
+                PrintAST(ifNode.Condition, indent + 8, prefix + "          ");
+                Console.WriteLine(prefix + "      Body:");
+                PrintAST(ifNode.ThenBranch, indent + 8, prefix + "          ");
                 foreach (var elseIfNode in ifNode.ElseIfBranches)
                 {
                     Console.WriteLine(prefix + "ElseIf:");
-                    Console.WriteLine(prefix + "├── │ Condition:");
-                    PrintAST(elseIfNode.Condition, indent + 8, prefix + "├── │   │ ");
-                    Console.WriteLine(prefix + "├── │ Body:");
-                    PrintAST(elseIfNode.ThenBranch, indent + 8, prefix + "├── │   │ ");
+                    Console.WriteLine(prefix + "      Condition:");
+                    PrintAST(elseIfNode.Condition, indent + 8, prefix + "          ");
+                    Console.WriteLine(prefix + "      Body:");
+                    PrintAST(elseIfNode.ThenBranch, indent + 8, prefix + "          ");
                 }
                 if (ifNode.ElseBranch != null)
                 {
                     Console.WriteLine(prefix + "Else:");
-                    Console.WriteLine(prefix + "├── │ Body:");
-                    PrintAST(ifNode.ElseBranch, indent + 8, prefix + "├── │   │ ");
+                    Console.WriteLine(prefix + "      Body:");
+                    PrintAST(ifNode.ElseBranch, indent + 8, prefix + "          ");
                 }
             }
             else if (node is ForNode forNode)
             {
                 Console.WriteLine(prefix + "For:");
-                PrintAST(forNode.Initialization, indent + 4, prefix + "├── | ");
-                Console.WriteLine(prefix + "├── │ Body:");
-                PrintAST(forNode.Body, indent + 4, prefix + "├── │   │ ");
+                PrintAST(forNode.Initialization, indent + 4, prefix + "      ");
+                Console.WriteLine(prefix + "      Body:");
+                PrintAST(forNode.Body, indent + 4, prefix + "          ");
             }
             else if (node is ForeachNode foreachNode)
             {
                 Console.WriteLine(prefix + "Foreach:");
-                Console.WriteLine(prefix + "├── │ Variable Declaration:");
-                PrintAST(foreachNode.VariableDeclaration, indent + 8, prefix + "├── │   │ ");
-                Console.WriteLine(prefix + "├── │ Body:");
-                PrintAST(foreachNode.Body, indent + 8, prefix + "├── │   │");
+                Console.WriteLine(prefix + "      Variable Declaration:");
+                PrintAST(foreachNode.VariableDeclaration, indent + 8, prefix + "          ");
+                Console.WriteLine(prefix + "      Body:");
+                PrintAST(foreachNode.Body, indent + 8, prefix + "         ");
             }
             else if (node is WhileNode whileNode)
             {
                 Console.WriteLine(prefix + "While:");
-                Console.WriteLine(prefix + "├── Condition:");
-                PrintAST(whileNode.Condition, indent + 8, prefix + "├── │ ");
-                Console.WriteLine(prefix + "├── │ Body:");
-                PrintAST(whileNode.Body, indent + 8, prefix + "├── │   │  ");
+                Console.WriteLine(prefix + "    Condition:");
+                PrintAST(whileNode.Condition, indent + 8, prefix + "      ");
+                Console.WriteLine(prefix + "      Body:");
+                PrintAST(whileNode.Body, indent + 8, prefix + "           ");
             }
             else if (node is UnaryOperationNode unaryOp)
             {
                 Console.WriteLine(prefix + "Unary Operation (" + unaryOp.Operator + "):");
-                Console.WriteLine(prefix + "├── │ Variable: " + unaryOp.Variable);
+                Console.WriteLine(prefix + "      Variable: " + unaryOp.Variable);
             }
             else if (node is GroupedAssignmentNode groupedAssignment)
             {
                 Console.WriteLine(prefix + "Declaration:");
-                Console.WriteLine(prefix + "├── Keyword: my");
-                Console.WriteLine(prefix + "├── Variables:");
+                Console.WriteLine(prefix + "    Keyword: my");
+                Console.WriteLine(prefix + "    Variables:");
                 foreach (var groupedVariable in groupedAssignment.Variables) // Renamed 'variable' to 'groupedVariable'
                 {
-                    Console.WriteLine(prefix + "│   ├── Variable: " + ((VariableNode)groupedVariable).Name);
+                    Console.WriteLine(prefix + "        Variable: " + ((VariableNode)groupedVariable).Name);
                 }
-                Console.WriteLine(prefix + "├── Value:");
-                PrintAST(groupedAssignment.Value, indent + 8, prefix + "│   ");
+                Console.WriteLine(prefix + "    Value:");
+                PrintAST(groupedAssignment.Value, indent + 8, prefix + "    ");
             }
             else if (node is FunctionNode functionNode)
             {
                 Console.WriteLine(prefix + "Function:");
-                Console.WriteLine(prefix + "├── Name: " + functionNode.Name);
-                Console.WriteLine(prefix + "├── Parameters:");
+                Console.WriteLine(prefix + "    Name: " + functionNode.Name);
+                Console.WriteLine(prefix + "    Parameters:");
                 foreach (var parameter in functionNode.Parameters)
                 {
                     if (parameter is VariableDeclarationNode declaration1)
                     {
-                        Console.WriteLine(prefix + "│   ├── Variable: " + declaration1.Variable);
+                        Console.WriteLine(prefix + "        Variable: " + declaration1.Variable);
                     }
                     else if (parameter is VariableNode variable1)
                     {
-                        Console.WriteLine(prefix + "│   ├── Variable: " + variable1.Name);
+                        Console.WriteLine(prefix + "        Variable: " + variable1.Name);
                     }
                 }
-                Console.WriteLine(prefix + "├── Body:");
-                PrintAST(functionNode.Body, indent + 8, prefix + "│   ");
+                Console.WriteLine(prefix + "    Body:");
+                PrintAST(functionNode.Body, indent + 8, prefix + "    ");
             }
             else if (node is ParameterNode parameterNode)
             {
@@ -242,15 +273,15 @@ namespace MTRAN.Parser
                 Console.WriteLine(prefix + "Array:");
                 foreach (var element in arrayNode.Elements)
                 {
-                    PrintAST(element, indent + 8, prefix + "├── │ ");
+                    PrintAST(element, indent + 8, prefix + "      ");
                 }
             }
             else if (node is ParenthesizedExpression parenthesizedExpression)
             {
                 Console.WriteLine(prefix + "ParenthesizedExpression:");
-                Console.WriteLine(prefix + "├── Delimiter: (");
-                PrintAST(parenthesizedExpression.Expression, indent + 8, prefix + "├── │ ");
-                Console.WriteLine(prefix + "├── Delimiter: )");
+                Console.WriteLine(prefix + "    Delimiter: (");
+                PrintAST(parenthesizedExpression.Expression, indent + 8, prefix + "      ");
+                Console.WriteLine(prefix + "    Delimiter: )");
             }
             else if (node is PunctuationNode punctuationNode)
             {
@@ -259,11 +290,11 @@ namespace MTRAN.Parser
             else if (node is FunctionCallNode functionCall)
             {
                 Console.WriteLine(prefix + "Function Call:");
-                Console.WriteLine(prefix + "├── Function Name: " + functionCall.FunctionName);
-                Console.WriteLine(prefix + "├── Arguments:");
+                Console.WriteLine(prefix + "    Function Name: " + functionCall.FunctionName);
+                Console.WriteLine(prefix + "    Arguments:");
                 foreach (var argument in functionCall.Arguments)
                 {
-                    PrintAST(argument, indent + 4, prefix + "│   ");
+                    PrintAST(argument, indent + 4, prefix + "    ");
                 }
             }
             else if (node is HashNode hashNode)
@@ -271,10 +302,10 @@ namespace MTRAN.Parser
                 Console.WriteLine(prefix + "Hash:");
                 foreach (var (key, value) in hashNode.Elements)
                 {
-                    Console.WriteLine(prefix + "├── │ Key:");
-                    PrintAST(key, indent + 8, prefix + "├── │   │ ");
-                    Console.WriteLine(prefix + "├── │ Value:");
-                    PrintAST(value, indent + 8, prefix + "├── │   │ ");
+                    Console.WriteLine(prefix + "      Key:");
+                    PrintAST(key, indent + 8, prefix + "");
+                    Console.WriteLine(prefix + "      Value:");
+                    PrintAST(value, indent + 8, prefix + "");
                 }
             }
             else if (node is PrintStatementNode printStatement)
@@ -288,8 +319,8 @@ namespace MTRAN.Parser
             else if (node is BlessNode blessNode)
             {
                 Console.WriteLine(prefix + "Bless:");
-                Console.WriteLine(prefix + "├── Object: ");
-                PrintAST(blessNode.Object, indent + 4, prefix + "│   ");
+                Console.WriteLine(prefix + "    Object: ");
+                PrintAST(blessNode.Object, indent + 4, prefix + "    ");
                 Console.WriteLine(prefix + "└── Class: ");
                 PrintAST(blessNode.Class, indent + 4, prefix + "    ");
             }
@@ -305,15 +336,15 @@ namespace MTRAN.Parser
             else if (node is ObjectNode objectNode)
             {
                 Console.WriteLine(prefix + "Object:");
-                Console.WriteLine(prefix + "├── Name: " + objectNode.Name);
+                Console.WriteLine(prefix + "    Name: " + objectNode.Name);
 
                 foreach (var (key, value) in objectNode.Properties)
                 {
-                    Console.WriteLine(prefix + "├── Property:");
-                    Console.WriteLine(prefix + "│   ├── Key:");
-                    PrintAST(key, indent + 8, prefix + "│   │   ");
-                    Console.WriteLine(prefix + "│   └── Value:");
-                    PrintAST(value, indent + 8, prefix + "│       ");
+                    Console.WriteLine(prefix + "    Property:");
+                    Console.WriteLine(prefix + "        Key:");
+                    PrintAST(key, indent + 8, prefix + "        ");
+                    Console.WriteLine(prefix + "    └── Value:");
+                    PrintAST(value, indent + 8, prefix + "        ");
                 }
             }
         }
