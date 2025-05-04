@@ -526,10 +526,20 @@ namespace MTRAN.Interpreter
             {
                 return ClassDeclaration();
             }
+            else if (_currentToken.TokenType == PerlToken.LAST) // Handle 'last' keyword
+            {
+                return LastStatement();
+            }
             else
             {
                 return Expr();
             }
+        }
+
+        private ASTNode LastStatement()
+        {
+            Eat(PerlToken.LAST); // Consume the 'last' token
+            return new LastNode(); // Return a LastNode
         }
 
         private ASTNode ClassDeclaration()
@@ -901,7 +911,7 @@ namespace MTRAN.Interpreter
             ASTNode body = ParseBlock();
             Eat(PerlToken.RBRACE);
 
-            return new ForNode(forExpression, null, null, body);
+            return new ForNode(forExpression, condition, increment, body);
         }
 
         

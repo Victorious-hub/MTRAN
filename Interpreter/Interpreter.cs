@@ -7,7 +7,7 @@ namespace MTRAN.Interpreter
         private readonly Dictionary<string, FunctionNode> _functionTable = new Dictionary<string, FunctionNode>();
         private Dictionary<string, object> _variableValues = new Dictionary<string, object>();
 
- public void Analyze(ASTNode node)
+        public void Analyze(ASTNode node)
         {
             if (node is ProgramNode programNode)
             {
@@ -212,25 +212,30 @@ namespace MTRAN.Interpreter
                 _symbolTable.EnterScope("For");
                 try
                 {
+                    // Analyze the initialization
                     if (forNode.Initialization != null)
                     {
                         Analyze(forNode.Initialization);
                     }
 
+                    // Analyze the condition
                     if (forNode.Condition != null)
                     {
-                        if (!IsNumeric(forNode.Condition))
+                        string conditionType = InferType(forNode.Condition);
+                        if (conditionType != "bool")
                         {
-                            AddError($"Semantic Error: The condition in the 'for' loop must be numeric.");
+                            AddError($"Semantic Error: The condition in the 'for' loop must be boolean, but got '{conditionType}'.");
                         }
                         Analyze(forNode.Condition);
                     }
 
+                    // Analyze the increment
                     if (forNode.Increment != null)
                     {
                         Analyze(forNode.Increment);
                     }
 
+                    // Analyze the body
                     if (forNode.Body != null)
                     {
                         Analyze(forNode.Body);
@@ -386,14 +391,22 @@ namespace MTRAN.Interpreter
             }
             else if (node is ForeachNode foreachNode)
             {
-                Analyze(foreachNode.Array);
+                string arrayType = InferType(foreachNode.Array);
+
+                if (!arrayType.StartsWith("array<"))
+                {
+                    AddError($"Semantic Error: The foreach loop requires an array to iterate over, but got '{arrayType}'.");
+                    return;
+                }
+
+                string elementType = arrayType.Substring(6, arrayType.Length - 7);
 
                 _symbolTable.EnterScope("Foreach");
                 try
                 {
                     if (foreachNode.VariableDeclaration is VariableDeclarationNode variableDeclaration)
                     {
-                        _symbolTable.DeclareVariable(variableDeclaration.Variable, "unknown");
+                        _symbolTable.DeclareVariable(variableDeclaration.Variable, elementType);
                     }
 
                     Analyze(foreachNode.Body);
@@ -692,9 +705,15 @@ namespace MTRAN.Interpreter
                 {
                     return "int";
                 }
-                if (node is NumberNode)
+                if (node is NumberNode numberNode)
                 {
-                    return "float";
+                    // Check if the number contains a dot or scientific notation
+                    string numberString = numberNode.Value.ToString();
+                    if (numberString.Contains('.') || numberString.Contains('e') || numberString.Contains('E'))
+                    {
+                        return "float";
+                    }
+                    return "int";
                 }
                 if (node is StringNode)
                 {
@@ -1061,16 +1080,16 @@ namespace MTRAN.Interpreter
                     Console.WriteLine($"[INTERPRET] {arrayName} = {string.Join(", ", arrayValues)}");
                 }
             }
-            else if (node is VariableDeclarationNode declarationNode2 && declarationNode2.Variable.StartsWith("$"))
+            else if (node is VariableDeclarationNode declarationNode4 && declarationNode4.Variable.StartsWith("$"))
             {
-                string variableName = declarationNode2.Variable;
+                string variableName = declarationNode4.Variable;
 
-                Console.WriteLine($"[DEBUG] Declaring variable '{variableName}' with keyword '{declarationNode2.Keyword}'.");
+                Console.WriteLine($"[DEBUG] Declaring variable '{variableName}' with keyword '{declarationNode4.Keyword}'.");
 
                 object value = null;
-                if (declarationNode2.Value != null)
+                if (declarationNode4.Value != null)
                 {
-                    value = Evaluate(declarationNode2.Value);
+                    value = Evaluate(declarationNode4.Value);
                 }
 
                 if (_variableValues.ContainsKey(variableName))
@@ -1160,6 +1179,7 @@ namespace MTRAN.Interpreter
             {
                 Console.WriteLine("[DEBUG] Interpreting ForNode...");
 
+                // Execute the initialization
                 if (forNode.Initialization != null)
                 {
                     Interpret(forNode.Initialization);
@@ -1167,6 +1187,13 @@ namespace MTRAN.Interpreter
 
                 while (true)
                 {
+                    // Evaluate the condition
+                    if (forNode.Condition == null)
+                    {
+                        AddError("Interpretation Error: ForNode condition is null.");
+                        break;
+                    }
+
                     object conditionValue = Evaluate(forNode.Condition);
                     Console.WriteLine($"[DEBUG] ForNode condition evaluated to: {conditionValue}");
 
@@ -1175,11 +1202,26 @@ namespace MTRAN.Interpreter
                         break;
                     }
 
-                    Interpret(forNode.Body);
+                    // Execute the body of the loop
+                    if (forNode.Body != null)
+                    {
+                        Interpret(forNode.Body);
+                    }
+                    else
+                    {
+                        AddError("Interpretation Error: ForNode body is null.");
+                        break;
+                    }
 
+                    // Execute the increment
                     if (forNode.Increment != null)
                     {
                         Interpret(forNode.Increment);
+                    }
+                    else
+                    {
+                        AddError("Interpretation Error: ForNode increment is null.");
+                        break;
                     }
                 }
             }
@@ -1324,7 +1366,15 @@ namespace MTRAN.Interpreter
                     // Execute the body of the loop
                     if (forNode1.Body != null)
                     {
+                        Console.WriteLine("[DEBUG] Executing ForNode body...");
                         Interpret(forNode1.Body);
+
+                        // Check for LastNode in the loop body
+                        if (ContainsLastNode(forNode1.Body))
+                        {
+                            Console.WriteLine("[DEBUG] 'last' encountered, breaking out of the loop...");
+                            break;
+                        }
                     }
                     else
                     {
@@ -1335,6 +1385,7 @@ namespace MTRAN.Interpreter
                     // Execute the increment
                     if (forNode1.Increment != null)
                     {
+                        Console.WriteLine("[DEBUG] Executing ForNode increment...");
                         Interpret(forNode1.Increment);
                     }
                     else
@@ -1343,11 +1394,66 @@ namespace MTRAN.Interpreter
                         break;
                     }
                 }
+
+                Console.WriteLine("[DEBUG] ForNode condition evaluated to: False");
             }
             else
             {
                 AddError($"Interpretation Error: Unsupported AST node type '{node.GetType().Name}'.");
             }
+        }
+
+
+        private bool ContainsLastNode(ASTNode node)
+        {
+            if (node is LastNode)
+            {
+                return true;
+            }
+            else if (node is BlockNode blockNode)
+            {
+                foreach (var statement in blockNode.Statements)
+                {
+                    if (ContainsLastNode(statement))
+                    {
+                        return true;
+                    }
+                }
+            }
+            else if (node is IfNode ifNode)
+            {
+                // Check the ThenBranch
+                if (ContainsLastNode(ifNode.ThenBranch))
+                {
+                    return true;
+                }
+
+                // Check all ElseIfBranches
+                foreach (var elseIfBranch in ifNode.ElseIfBranches)
+                {
+                    if (ContainsLastNode(elseIfBranch.ThenBranch))
+                    {
+                        return true;
+                    }
+                }
+
+                // Check the ElseBranch
+                if (ifNode.ElseBranch != null && ContainsLastNode(ifNode.ElseBranch))
+                {
+                    return true;
+                }
+            }
+            else if (node is StatementListNode statementListNode)
+            {
+                foreach (var statement in statementListNode.Statements)
+                {
+                    if (ContainsLastNode(statement))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
 

@@ -4,6 +4,22 @@ namespace MTRAN.Interpreter
     {
     }
 
+    public class LastNode : ASTNode
+    {
+        public string Label { get; }
+
+        // Optional label for the 'last' statement (e.g., last LABEL;)
+        public LastNode(string label = null)
+        {
+            Label = label;
+        }
+
+        public override string ToString()
+        {
+            return Label != null ? $"LastNode(Label: {Label})" : "LastNode";
+        }
+    }
+
     public class ParameterNode : ASTNode
     {
         public string Name { get; }

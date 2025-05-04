@@ -38,13 +38,6 @@ while ($h != 5) {
     $h++;
 }
 
-
-# # my %person = (
-# #     'name' => "Bob",
-# #     age'  => 1.2323,
-# #     city => "New York"
-# # );
-
 my $age = 1 - 2;
 
 if ($age <= 18) {
@@ -71,14 +64,15 @@ if ($age <= 18) {
     print 3;
 }
 
-# for (my $j = 1; $j <= 3; $j++) {
-#     $age++;
-# }
-
-
 sub print_name($age, $counter) {
     $ee = 2;
     print "Text";
+    for (my $j = 0; $j < 10; $j++) {
+        print $j;
+        if ($j == 5) {
+            print "break";
+        }
+    }
     return "r";
 }
 

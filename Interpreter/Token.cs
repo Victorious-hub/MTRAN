@@ -6,6 +6,7 @@ namespace MTRAN.Interpreter
 {
     public enum PerlToken
     {
+        LAST,
         /* Special tokens */
         ILLEGAL,
         EOF_,
@@ -105,6 +106,7 @@ namespace MTRAN.Interpreter
     {
         public readonly Dictionary<PerlToken, string> KeywordPatterns = new()
         {
+            { PerlToken.LAST, @"\blast\b" },                        // last (e.g., last)
             { PerlToken.BLESS, @"\bbless\b" },                        // my (e.g., my)
             { PerlToken.NEW, @"\bnew\b" },                        // my (e.g., my)
             { PerlToken.MY, @"\bmy\b" },                        // my (e.g., my)
