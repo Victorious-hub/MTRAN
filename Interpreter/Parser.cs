@@ -526,6 +526,10 @@ namespace MTRAN.Interpreter
             {
                 return ClassDeclaration();
             }
+            else if (_currentToken.TokenType == PerlToken.NEXT) // Handle 'next' keyword
+            {
+                return NextStatement();
+            }
             else if (_currentToken.TokenType == PerlToken.LAST) // Handle 'last' keyword
             {
                 return LastStatement();
@@ -536,10 +540,45 @@ namespace MTRAN.Interpreter
             }
         }
 
+        private ASTNode NextStatement()
+        {
+            Eat(PerlToken.NEXT); // Consume the 'next' token
+
+            // Check if the 'next' statement is part of an 'if' condition
+            if (_currentToken.TokenType == PerlToken.IF)
+            {
+                Eat(PerlToken.IF); // Consume the 'if' keyword
+                Eat(PerlToken.LPAREN); // Consume the opening parenthesis
+                ASTNode condition = Expr(); // Parse the condition
+                Eat(PerlToken.RPAREN); // Consume the closing parenthesis
+                return new NextNode(condition); // Return a NextNode with the condition
+            }
+
+            return new NextNode(); // Return a NextNode without a condition
+        }
+
         private ASTNode LastStatement()
         {
             Eat(PerlToken.LAST); // Consume the 'last' token
-            return new LastNode(); // Return a LastNode
+
+            string? label = null;
+            if (_currentToken.TokenType == PerlToken.IDENT)
+            {
+                label = _currentToken.Lexeme; // Get the label
+                Eat(PerlToken.IDENT); // Consume the label
+            }
+
+            // Check if the 'last' statement is part of an 'if' condition
+            if (_currentToken.TokenType == PerlToken.IF)
+            {
+                Eat(PerlToken.IF); // Consume the 'if' keyword
+                Eat(PerlToken.LPAREN); // Consume the opening parenthesis
+                ASTNode condition = Expr(); // Parse the condition
+                Eat(PerlToken.RPAREN); // Consume the closing parenthesis
+                return new LastNode(condition, label); // Return a LastNode with the condition and label
+            }
+
+            return new LastNode(null, label); // Return a LastNode with only the label
         }
 
         private ASTNode ClassDeclaration()

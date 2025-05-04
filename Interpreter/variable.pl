@@ -70,8 +70,14 @@ sub print_name($age, $counter) {
     for (my $j = 0; $j < 10; $j++) {
         print $j;
         if ($j == 5) {
-            print "break";
+            next;
         }
+        elsif ($j == 6) {
+            last;
+        } else {
+            print "else";
+        }
+        print "PENISSSSS";
     }
     return "r";
 }

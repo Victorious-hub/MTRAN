@@ -6,6 +6,7 @@ namespace MTRAN.Interpreter
         private readonly List<string> _errors = new List<string>();
         private readonly Dictionary<string, FunctionNode> _functionTable = new Dictionary<string, FunctionNode>();
         private Dictionary<string, object> _variableValues = new Dictionary<string, object>();
+        private bool _skipToNextIteration = false;
 
         public void Analyze(ASTNode node)
         {
@@ -464,6 +465,16 @@ namespace MTRAN.Interpreter
                     AddError($"Semantic Error: Constant '{useNode.ConstantName}' is already declared.");
                 }
             }
+            else if (node is LastNode lastNode)
+            {
+                Console.WriteLine("[DEBUG] Analyzing LastNode...");
+
+                // Analyze the condition if it exists
+                if (lastNode.Condition != null)
+                {
+                    Analyze(lastNode.Condition);
+                }
+            }
             else if (node is ArrayAccessNode arrayAccessNode)
             {
                 // Check if the array is declared
@@ -525,6 +536,16 @@ namespace MTRAN.Interpreter
                 else
                 {
                     AddError($"Semantic Error: Invalid class reference in 'bless' statement.");
+                }
+            }
+            else if (node is NextNode nextNode)
+            {
+                Console.WriteLine("[DEBUG] Analyzing NextNode...");
+
+                // Analyze the condition if it exists
+                if (nextNode.Condition != null)
+                {
+                    Analyze(nextNode.Condition);
                 }
             }
             else if (node is HashElementAssignmentNode hashElementAssignmentNode)
@@ -924,6 +945,63 @@ namespace MTRAN.Interpreter
         }
 
 
+        private bool ContainsConditionalLastNode(ASTNode node)
+        {
+            if (node is IfNode ifNode)
+            {
+                object conditionValue = Evaluate(ifNode.Condition);
+                if (conditionValue is bool condition && condition)
+                {
+                    // Check if the ThenBranch contains a LastNode
+                    if (ContainsLastNode(ifNode.ThenBranch))
+                    {
+                        return true;
+                    }
+                }
+
+                // Check all ElseIfBranches
+                foreach (var elseIfBranch in ifNode.ElseIfBranches)
+                {
+                    object elseIfConditionValue = Evaluate(elseIfBranch.Condition);
+                    if (elseIfConditionValue is bool elseIfCondition && elseIfCondition)
+                    {
+                        if (ContainsLastNode(elseIfBranch.ThenBranch))
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                // Check the ElseBranch
+                if (ifNode.ElseBranch != null && ContainsLastNode(ifNode.ElseBranch))
+                {
+                    return true;
+                }
+            }
+            else if (node is BlockNode blockNode)
+            {
+                foreach (var statement in blockNode.Statements)
+                {
+                    if (ContainsConditionalLastNode(statement))
+                    {
+                        return true;
+                    }
+                }
+            }
+            else if (node is StatementListNode statementListNode)
+            {
+                foreach (var statement in statementListNode.Statements)
+                {
+                    if (ContainsConditionalLastNode(statement))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+
         public void Interpret(ASTNode node)
         {
             if (node is HashNode hashNode)
@@ -1205,7 +1283,15 @@ namespace MTRAN.Interpreter
                     // Execute the body of the loop
                     if (forNode.Body != null)
                     {
+                        Console.WriteLine("[DEBUG] Executing ForNode body...");
                         Interpret(forNode.Body);
+
+                        // Check for LastNode under an IfNode in the loop body
+                        if (ContainsConditionalLastNode(forNode.Body))
+                        {
+                            Console.WriteLine("[DEBUG] 'last' encountered, breaking out of the loop...");
+                            break;
+                        }
                     }
                     else
                     {
@@ -1216,6 +1302,7 @@ namespace MTRAN.Interpreter
                     // Execute the increment
                     if (forNode.Increment != null)
                     {
+                        Console.WriteLine("[DEBUG] Executing ForNode increment...");
                         Interpret(forNode.Increment);
                     }
                     else
@@ -1224,6 +1311,8 @@ namespace MTRAN.Interpreter
                         break;
                     }
                 }
+
+                Console.WriteLine("[DEBUG] ForNode condition evaluated to: False");
             }
             else if (node is WhileNode whileNode)
             {
@@ -1336,6 +1425,26 @@ namespace MTRAN.Interpreter
                     }
                 }
             }
+            else if (node is NextNode nextNode)
+            {
+                Console.WriteLine("[DEBUG] Interpreting NextNode...");
+
+                // Evaluate the condition if it exists
+                if (nextNode.Condition != null)
+                {
+                    object conditionValue = Evaluate(nextNode.Condition);
+                    if (conditionValue is bool condition && condition)
+                    {
+                        Console.WriteLine("[DEBUG] 'next' encountered, skipping to the next iteration...");
+                        _skipToNextIteration = true; // Set the flag to skip the rest of the loop body
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("[DEBUG] 'next' encountered, skipping to the next iteration...");
+                    _skipToNextIteration = true; // Set the flag to skip the rest of the loop body
+                }
+            }
             else if (node is ForNode forNode1)
             {
                 Console.WriteLine("[DEBUG] Interpreting ForNode...");
@@ -1363,13 +1472,22 @@ namespace MTRAN.Interpreter
                         break;
                     }
 
+                    _skipToNextIteration = false; // Reset the flag at the start of each iteration
+
                     // Execute the body of the loop
                     if (forNode1.Body != null)
                     {
                         Console.WriteLine("[DEBUG] Executing ForNode body...");
                         Interpret(forNode1.Body);
 
-                        // Check for LastNode in the loop body
+                        // Check if the `next` statement was encountered
+                        if (_skipToNextIteration)
+                        {
+                            Console.WriteLine("[DEBUG] Skipping to the next iteration...");
+                            continue; // Skip the rest of the loop body and proceed to the next iteration
+                        }
+
+                        // Check for `last` statement in the loop body
                         if (ContainsLastNode(forNode1.Body))
                         {
                             Console.WriteLine("[DEBUG] 'last' encountered, breaking out of the loop...");

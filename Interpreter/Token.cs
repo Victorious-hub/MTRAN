@@ -99,13 +99,15 @@ namespace MTRAN.Interpreter
         HASH_ASSIGN   ,            //: '=>' ;
         BLESS,
         NEW,
-        SHIFT
+        SHIFT,
+        NEXT
     }
     
     public class TokenDictionary
     {
         public readonly Dictionary<PerlToken, string> KeywordPatterns = new()
         {
+            { PerlToken.NEXT, @"\bnext\b" },
             { PerlToken.LAST, @"\blast\b" },                        // last (e.g., last)
             { PerlToken.BLESS, @"\bbless\b" },                        // my (e.g., my)
             { PerlToken.NEW, @"\bnew\b" },                        // my (e.g., my)

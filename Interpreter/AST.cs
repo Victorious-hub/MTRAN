@@ -4,19 +4,39 @@ namespace MTRAN.Interpreter
     {
     }
 
+    public class NextNode : ASTNode
+    {
+        public ASTNode? Condition { get; }
+
+        public NextNode(ASTNode? condition = null)
+        {
+            Condition = condition;
+        }
+
+        public override string ToString()
+        {
+            return Condition != null
+                ? $"Continue operation (Condition: {Condition})"
+                : "Continue operation";
+        }
+    }
+
     public class LastNode : ASTNode
     {
-        public string Label { get; }
+        public ASTNode? Condition { get; }
+        public string? Label { get; }
 
-        // Optional label for the 'last' statement (e.g., last LABEL;)
-        public LastNode(string label = null)
+        public LastNode(ASTNode? condition = null, string? label = null)
         {
+            Condition = condition;
             Label = label;
         }
 
         public override string ToString()
         {
-            return Label != null ? $"LastNode(Label: {Label})" : "LastNode";
+            return Condition != null
+                ? $"Break operation (Condition: {Condition}, Label: {Label})"
+                : $"Break operation (Label: {Label})";
         }
     }
 
