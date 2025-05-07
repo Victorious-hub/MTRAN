@@ -1,13 +1,13 @@
 # use CONSTANT => 1;
 
-# my %person = (
+# my %person1 = (
 #     "name" => 1.56,
 #     "age"  => 1.2323,
 #     "city" => "New York"
 # );
-# print $person{"name"} * $person{"age"};
+# print $person1{"name"} * $person1{"age"};
 
-# my $age2 = $person{"name"};
+# my $age2 = $person1{"name"};
 
 # print $age2;
 
@@ -24,13 +24,13 @@
 
 # my @list = (2, 20, 30, 40, 50);
 
-# my $result = 0;
+# my $resul2t = 0;
 
 # foreach my $num (@list) {
 #    print "value of a: $num";
-#    $result += $num;
+#    $resul2t += $num;
 # }
-# print $result;
+# print $resul2t;
 # $h = 3;
 
 # while ($h != 5) {
@@ -89,57 +89,105 @@
 
 
 
-my %person = (
-    "name" => "Alice",
-    "age"  => 30,
-    "city" => "New York"
-);
+# my %person = (
+#     "name" => "Alice",
+#     "age"  => 30,
+#     "city" => "New York"
+# );
 
-print $person{"name"}; # prints "Alice"
-print $person{"age"};  # prints 30
+# print $person{"name"}; # prints "Alice"
+# print $person{"age"};  # prints 30
 
-my @fruits = ("apple", "banana", "cherry");
+# my @fruits = ("apple", "banana", "cherry");
 
-print $fruits[0]; # prints "apple"
-print $fruits[1]; # prints "banana"
+# print $fruits[0]; # prints "apple"
+# print $fruits[1]; # prints "banana"
 
-my $scalar = 42;
-print $scalar; # prints 42
-my $string = "Hello, World!";
-print $string; # prints "Hello, World!"
+# my $scalar = 42;
+# print $scalar; # prints 42
+# my $string = "Hello, World!";
+# print $string; # prints "Hello, World!"
 
 
-my @numbers = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
-foreach my $num (@numbers) {
-    if ($num == 3) {
-        print "value of a: $num";
-        next;
-    }
+# my @numbers = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+# foreach my $num (@numbers) {
+#     if ($num == 3) {
+#         print "value of a: $num";
+#         next;
+#     }
 
-    if ($num == 5) {
-        print "value of a: $num. Last";
-        last;
-    }
+#     if ($num == 5) {
+#         print "value of a: $num. Last";
+#         last;
+#     }
+# }
+
+# my $string1 = "Hello, World!";
+# my $string2 = "Hello, World!";
+
+# if ($string1 == $string2) {
+#     print "Strings are equal";
+# } else {
+#     print "Strings are not equal";
+# }
+
+# my @arr = (1, 2, 3, 4, 5);
+
+# sub sum_elems {
+#     my $total = 0;
+#     foreach my $num (@arr) {
+#        $total += $num;
+#     }
+#     return "Result: $total";
+# }
+
+# my $result = sum_elems();
+# print $result;
+
+
+# my $a = 0;
+# my $b = 1;
+# my $fib = 0;
+# my $n = 10;
+
+# for (my $i = 0; $i <= $n; $i++) {
+#     $fib = $a + $b;
+#     $a = $b;
+#     $b = $fib;
+# }
+
+# print $a; # Expected output: 55
+
+
+# my @arr = (3, 17, 9, 5, 21, 8);
+# my $max = $arr[0];
+
+# foreach my $val (@arr) {
+#     if ($val > $max) {
+#         $max = $val;
+#     }
+# }
+
+# print "Maximum is $max\n";  # Вывод: 21
+
+# my $n2 = 5;
+# my $fact = 1;
+
+# for (my $i = 1; $i <= $n2; $i++) {
+#     $fact *= $i;
+# }
+
+# print "Factorial of $n2 is $fact\n";  # Вывод: 120
+
+
+my $n = 100;
+my $sum = 0;
+
+my $i = 1;
+while ($i <= $n) {
+    $sum += $i;
+    $i++;
 }
 
-my $string1 = "Hello, World!";
-my $string2 = "Hello, World!";
+print "Sum from 1 to $n is $sum\n";  # Вывод: 5050
 
-if ($string1 == $string2) {
-    print "Strings are equal";
-} else {
-    print "Strings are not equal";
-}
-
-my @arr = (1, 2, 3, 4, 5);
-
-sub sum_elems {
-    my $total = 0;
-    foreach my $num (@arr) {
-       $total += $num;
-    }
-    return "Result: $total";
-}
-
-my $result = sum_elems();
-print $result;

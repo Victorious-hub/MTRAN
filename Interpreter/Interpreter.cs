@@ -1339,22 +1339,79 @@ namespace MTRAN.Interpreter
                     AddError("Interpretation Error: The foreach loop requires an array to iterate over.");
                 }
             }
+            // else if (node is WhileNode whileNode1)
+            // {
+            //     Console.WriteLine("[DEBUG] Interpreting WhileNode...");
+
+            //     while (true)
+            //     {
+            //         object conditionValue = Evaluate(whileNode1.Condition);
+            //         Console.WriteLine($"[DEBUG] WhileNode condition evaluated to: {conditionValue}");
+
+            //         if (conditionValue is bool condition && condition)
+            //         {
+            //             Interpret(whileNode1.Body);
+            //         }
+            //         else
+            //         {
+            //             Console.WriteLine("[DEBUG] WhileNode condition is false, exiting loop...");
+            //             break;
+            //         }
+            //     }
+            // }
             else if (node is WhileNode whileNode1)
             {
                 Console.WriteLine("[DEBUG] Interpreting WhileNode...");
 
                 while (true)
                 {
+                    // Evaluate the condition
+                    if (whileNode1.Condition == null)
+                    {
+                        AddError("Interpretation Error: WhileNode condition is null.");
+                        break;
+                    }
+
                     object conditionValue = Evaluate(whileNode1.Condition);
                     Console.WriteLine($"[DEBUG] WhileNode condition evaluated to: {conditionValue}");
 
-                    if (conditionValue is bool condition && condition)
+                    // Ensure the condition is a boolean and stop the loop if it's false
+                    if (conditionValue is bool condition && !condition)
                     {
+                        Console.WriteLine("[DEBUG] WhileNode condition is false, exiting loop...");
+                        break;
+                    }
+                    else if (!(conditionValue is bool))
+                    {
+                        AddError("Interpretation Error: WhileNode condition must evaluate to a boolean.");
+                        break;
+                    }
+
+                    _skipToNextIteration = false; // Reset the flag at the start of each iteration
+
+                    // Execute the body of the loop
+                    if (whileNode1.Body != null)
+                    {
+                        Console.WriteLine("[DEBUG] Executing WhileNode body...");
                         Interpret(whileNode1.Body);
+
+                        // Check if the `next` statement was encountered
+                        if (_skipToNextIteration)
+                        {
+                            Console.WriteLine("[DEBUG] 'next' encountered, skipping to the next iteration...");
+                            continue; // Skip the rest of the loop body and proceed to the next iteration
+                        }
+
+                        // Check if the `last` statement was encountered
+                        if (ContainsConditionalLastNode(whileNode1.Body))
+                        {
+                            Console.WriteLine("[DEBUG] 'last' encountered, breaking out of the loop...");
+                            break; // Exit the loop
+                        }
                     }
                     else
                     {
-                        Console.WriteLine("[DEBUG] WhileNode condition is false, exiting loop...");
+                        AddError("Interpretation Error: WhileNode body is null.");
                         break;
                     }
                 }
