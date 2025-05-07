@@ -8,6 +8,8 @@ namespace MTRAN.Interpreter
         private Dictionary<string, object> _variableValues = new Dictionary<string, object>();
         private bool _skipToNextIteration = false;
 
+        private bool _skipNextTime = true;
+
         public void Analyze(ASTNode node)
         {
             if (node is ProgramNode programNode)
@@ -1036,13 +1038,10 @@ namespace MTRAN.Interpreter
             }
             if (node is IfNode ifNode)
             {
-                Console.WriteLine($"[DEBUG] Interpreting IfNode... {ifNode.Condition}");
                 object conditionValue = Evaluate(ifNode.Condition);
-                Console.WriteLine($"[DEBUG] Condition evaluated to: {conditionValue}");
 
                 if (conditionValue is bool condition && condition)
                 {
-                    Console.WriteLine("[DEBUG] Executing ThenBranch...");
                     Interpret(ifNode.ThenBranch);
                 }
                 else
@@ -1072,8 +1071,6 @@ namespace MTRAN.Interpreter
             }
             else if (node is CompoundAssignmentNode compoundAssignmentNode)
             {
-                Console.WriteLine($"[DEBUG] Interpreting compound assignment '{compoundAssignmentNode.OperatorSymbol}' for variable '{compoundAssignmentNode.Variable}'.");
-
                 // Check if the variable exists
                 if (!_variableValues.ContainsKey(compoundAssignmentNode.Variable))
                 {
@@ -1161,8 +1158,6 @@ namespace MTRAN.Interpreter
             else if (node is VariableDeclarationNode declarationNode4 && declarationNode4.Variable.StartsWith("$"))
             {
                 string variableName = declarationNode4.Variable;
-
-                Console.WriteLine($"[DEBUG] Declaring variable '{variableName}' with keyword '{declarationNode4.Keyword}'.");
 
                 object value = null;
                 if (declarationNode4.Value != null)
@@ -1253,84 +1248,7 @@ namespace MTRAN.Interpreter
 
                 Console.WriteLine($"[DEBUG] Function '{functionCallNode.FunctionName}' returned: {returnValue}");
             }
-            else if (node is ForNode forNode)
-            {
-                Console.WriteLine("[DEBUG] Interpreting ForNode...");
 
-                // Execute the initialization
-                if (forNode.Initialization != null)
-                {
-                    Interpret(forNode.Initialization);
-                }
-
-                while (true)
-                {
-                    // Evaluate the condition
-                    if (forNode.Condition == null)
-                    {
-                        AddError("Interpretation Error: ForNode condition is null.");
-                        break;
-                    }
-
-                    object conditionValue = Evaluate(forNode.Condition);
-                    Console.WriteLine($"[DEBUG] ForNode condition evaluated to: {conditionValue}");
-
-                    if (conditionValue is bool condition && !condition)
-                    {
-                        break;
-                    }
-
-                    // Execute the body of the loop
-                    if (forNode.Body != null)
-                    {
-                        Console.WriteLine("[DEBUG] Executing ForNode body...");
-                        Interpret(forNode.Body);
-
-                        // Check for LastNode under an IfNode in the loop body
-                        if (ContainsConditionalLastNode(forNode.Body))
-                        {
-                            Console.WriteLine("[DEBUG] 'last' encountered, breaking out of the loop...");
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        AddError("Interpretation Error: ForNode body is null.");
-                        break;
-                    }
-
-                    // Execute the increment
-                    if (forNode.Increment != null)
-                    {
-                        Console.WriteLine("[DEBUG] Executing ForNode increment...");
-                        Interpret(forNode.Increment);
-                    }
-                    else
-                    {
-                        AddError("Interpretation Error: ForNode increment is null.");
-                        break;
-                    }
-                }
-
-                Console.WriteLine("[DEBUG] ForNode condition evaluated to: False");
-            }
-            else if (node is WhileNode whileNode)
-            {
-                Console.WriteLine("[DEBUG] Interpreting WhileNode...");
-
-                while (true)
-                {
-                    object conditionValue = Evaluate(whileNode.Condition);
-                    Console.WriteLine($"[DEBUG] WhileNode condition evaluated to: {conditionValue}");
-
-                    if (conditionValue is bool condition && !condition)
-                    {
-                        break;
-                    }
-
-                    Interpret(whileNode.Body);
-                }
-            }
             else if (node is PrintStatementNode printStatementNode1)
             {
                 foreach (var argument in printStatementNode1.Arguments)
@@ -1390,14 +1308,30 @@ namespace MTRAN.Interpreter
                 {
                     foreach (var element in array)
                     {
+                        _skipToNextIteration = false; // Reset the flag at the start of each iteration
+
                         if (foreachNode.VariableDeclaration is VariableDeclarationNode variableDeclaration)
                         {
                             string variableName = variableDeclaration.Variable;
                             _variableValues[variableName] = element;
-                            Console.WriteLine($"[DEBUG] Iterating with {variableName} = {element}");
                         }
 
+                        // Interpret the body of the loop
                         Interpret(foreachNode.Body);
+
+                        // Check if the `next` statement was encountered
+                        if (_skipToNextIteration)
+                        {
+                            Console.WriteLine("[DEBUG] 'next' encountered, skipping to the next iteration...");
+                            continue; // Skip the rest of the loop body and proceed to the next iteration
+                        }
+
+                        // Check if the `last` statement was encountered
+                        if (ContainsConditionalLastNode(foreachNode.Body))
+                        {
+                            Console.WriteLine("[DEBUG] 'last' encountered, breaking out of the loop...");
+                            break; // Exit the loop
+                        }
                     }
                 }
                 else
@@ -1445,7 +1379,7 @@ namespace MTRAN.Interpreter
                     _skipToNextIteration = true; // Set the flag to skip the rest of the loop body
                 }
             }
-            else if (node is ForNode forNode1)
+           else if (node is ForNode forNode1)
             {
                 Console.WriteLine("[DEBUG] Interpreting ForNode...");
 
@@ -1467,8 +1401,14 @@ namespace MTRAN.Interpreter
                     object conditionValue = Evaluate(forNode1.Condition);
                     Console.WriteLine($"[DEBUG] ForNode condition evaluated to: {conditionValue}");
 
+                    // Ensure the condition is a boolean and stop the loop if it's false
                     if (conditionValue is bool condition && !condition)
                     {
+                        break;
+                    }
+                    else if (!(conditionValue is bool))
+                    {
+                        AddError("Interpretation Error: ForNode condition must evaluate to a boolean.");
                         break;
                     }
 
@@ -1483,15 +1423,21 @@ namespace MTRAN.Interpreter
                         // Check if the `next` statement was encountered
                         if (_skipToNextIteration)
                         {
-                            Console.WriteLine("[DEBUG] Skipping to the next iteration...");
+                            Console.WriteLine("[DEBUG] 'next' encountered, skipping to the next iteration...");
+                            // Execute the increment before continuing
+                            if (forNode1.Increment != null)
+                            {
+                                Console.WriteLine("[DEBUG] Executing ForNode increment...");
+                                Interpret(forNode1.Increment);
+                            }
                             continue; // Skip the rest of the loop body and proceed to the next iteration
                         }
 
-                        // Check for `last` statement in the loop body
-                        if (ContainsLastNode(forNode1.Body))
+                        // Check if the `last` statement was encountered
+                        if (ContainsConditionalLastNode(forNode1.Body))
                         {
                             Console.WriteLine("[DEBUG] 'last' encountered, breaking out of the loop...");
-                            break;
+                            break; // Exit the loop
                         }
                     }
                     else
@@ -1512,8 +1458,6 @@ namespace MTRAN.Interpreter
                         break;
                     }
                 }
-
-                Console.WriteLine("[DEBUG] ForNode condition evaluated to: False");
             }
             else
             {
@@ -1521,7 +1465,7 @@ namespace MTRAN.Interpreter
             }
         }
 
-
+    
         private bool ContainsLastNode(ASTNode node)
         {
             if (node is LastNode)
@@ -1560,6 +1504,7 @@ namespace MTRAN.Interpreter
                 {
                     return true;
                 }
+
             }
             else if (node is StatementListNode statementListNode)
             {
@@ -1653,7 +1598,6 @@ namespace MTRAN.Interpreter
         {
             if (node is ParenthesizedExpression parenthesizedExpression)
             {
-                Console.WriteLine("[DEBUG] Evaluating ParenthesizedExpression...");
                 return Evaluate(parenthesizedExpression.Expression);
             }
             if (node is IntNode intNode)
@@ -1988,6 +1932,19 @@ namespace MTRAN.Interpreter
                         return leftFloat / rightFloat;
                     default:
                         throw new InvalidOperationException($"Unsupported operator '{operatorSymbol}' for floats.");
+                }
+            }
+            else if (left is string leftString && right is string rightString)
+            {
+                switch (operatorSymbol)
+                {
+                    case "==":
+                        return leftString == rightString;
+                    case "!=":
+                        return leftString != rightString;
+                    default:
+                        AddError($"Interpretation Error: Unsupported operator '{operatorSymbol}' for strings.");
+                        return null;
                 }
             }
             else
