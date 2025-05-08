@@ -10,7 +10,7 @@ namespace MTRAN.Parser
         TOKEN
     }
 
-    public class PerlLexer
+    public class PerlLexerParser
     {
         public Dictionary<string, List<(PerlToken token, int line, int column, int id)>> outputTokens = new Dictionary<string, List<(PerlToken token, int line, int column, int id)>>();
         public TokenDictionary _tokenDicnionary = new TokenDictionary();
@@ -102,7 +102,7 @@ namespace MTRAN.Parser
             { PerlToken.USE, "Use" }
         };
 
-        public PerlLexer(string input)
+        public PerlLexerParser(string input)
         {
             _input = input;
             _index = 0;
@@ -280,6 +280,8 @@ namespace MTRAN.Parser
                         case PerlToken.NOT_EQUAL:
                         case PerlToken.HASH_ASSIGN:
                         case PerlToken.EQUAL:
+                        case PerlToken.REF_HASH:
+                        case PerlToken.POINTER_HASH:
                             operators.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description, tokenData.token));
                             break;
                         default:
@@ -333,6 +335,17 @@ namespace MTRAN.Parser
                 {
                     var currentChar = line[_index];
 
+                    if (_index + 1 < line.Length && line[_index] == '-' && line[_index + 1] == '>')
+                    {
+                        Console.WriteLine($"Found a pointer hash operator at line {_line}, column {_column}");
+                        var token = new Token(PerlToken.POINTER_HASH, "->", _line, _column, "Pointer hash operator") { Id = id++ };
+                        tokens.Add(token);
+                        _index += 2; // Skip the '->'
+                        _column += 2;
+                        AddToOutputTokens(token);
+                        continue;
+                    }
+
                     // Handle long comments
                     if (line.Substring(_index).StartsWith("=pod"))
                     {
@@ -384,8 +397,29 @@ namespace MTRAN.Parser
                         AddToOutputTokens(numberToken);
                         continue;
                     }
-                    
 
+                    if (line[_index] == '\\' && _index + 1 < line.Length && line[_index + 1] == '%')
+                    {
+                        
+                        int start = _index;
+                        _index += 2; // Skip the '\' and '%'
+
+                        // Collect the hash variable name
+                        while (_index < line.Length && (char.IsLetterOrDigit(line[_index]) || line[_index] == '_'))
+                        {
+                            _index++;
+                        }
+
+                        string refHash = line.Substring(start, _index - start);
+                        var refHashToken = new Token(PerlToken.REF_HASH, refHash, _line, _column, "Reference to hash");
+                        _column += refHash.Length;
+                        tokens.Add(refHashToken);
+                        Console.WriteLine($"Found a reference to a hash {refHashToken.Lexeme}");
+                        AddToOutputTokens(refHashToken);
+                        continue;
+                    }
+
+                
                     if (currentChar == '$' || currentChar == '@' || currentChar == '%')
                     {
                         int start = _index;

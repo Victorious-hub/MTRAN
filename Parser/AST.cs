@@ -4,6 +4,42 @@ namespace MTRAN.Parser
     {
     }
 
+    public class NextNode : ASTNode
+    {
+        public ASTNode? Condition { get; }
+
+        public NextNode(ASTNode? condition = null)
+        {
+            Condition = condition;
+        }
+
+        public override string ToString()
+        {
+            return Condition != null
+                ? $"Continue operation (Condition: {Condition})"
+                : "Continue operation";
+        }
+    }
+
+    public class LastNode : ASTNode
+    {
+        public ASTNode? Condition { get; }
+        public string? Label { get; }
+
+        public LastNode(ASTNode? condition = null, string? label = null)
+        {
+            Condition = condition;
+            Label = label;
+        }
+
+        public override string ToString()
+        {
+            return Condition != null
+                ? $"Break operation (Condition: {Condition}, Label: {Label})"
+                : $"Break operation (Label: {Label})";
+        }
+    }
+
     public class ParameterNode : ASTNode
     {
         public string Name { get; }
@@ -330,6 +366,26 @@ namespace MTRAN.Parser
 
 }
 
+    public class ReferenceNode : ASTNode
+    {
+        public string ReferencedVariable { get; }
+
+        public ReferenceNode(string referencedVariable)
+        {
+            if (string.IsNullOrEmpty(referencedVariable))
+            {
+                throw new ArgumentException("Referenced variable cannot be null or empty.", nameof(referencedVariable));
+            }
+
+            ReferencedVariable = referencedVariable;
+        }
+
+        public override string ToString()
+        {
+            return $"ReferenceNode(ReferencedVariable: {ReferencedVariable})";
+        }
+    }
+
     public class ArrayNode : ASTNode
     {
         public string Name { get; }
@@ -340,6 +396,8 @@ namespace MTRAN.Parser
             Name = name;
             Elements = elements;
         }
+
+        public List<ASTNode> Value => Elements;
     }
 
     public class PunctuationNode : ASTNode
@@ -480,6 +538,22 @@ namespace MTRAN.Parser
         {
             Keyword = keyword;
         }
+    }
 
+
+    public class ImplicitParameterNode : ASTNode
+    {
+        public string ParameterName { get; }
+        public ASTNode Value { get; set; } // Store the array of arguments
+
+        public ImplicitParameterNode(string parameterName)
+        {
+            ParameterName = parameterName;
+        }
+
+        public override string ToString()
+        {
+            return $"ImplicitParameterNode({ParameterName}, Value: {Value})";
+        }
     }
 }

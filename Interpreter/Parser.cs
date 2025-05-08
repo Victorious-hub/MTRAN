@@ -5,12 +5,12 @@ namespace MTRAN.Interpreter
 {
     public class Parser
     {
-        private readonly PerlLexer _lexer;
+        private readonly PerlLexerParser _lexer;
         private Token _currentToken;
         private int _currentTokenIndex;
         private Stack<PerlToken> _parenStack = new Stack<PerlToken>();
 
-        public Parser(PerlLexer lexer)
+        public Parser(PerlLexerParser lexer)
         {
             _lexer = lexer;
             _currentTokenIndex = 0;
@@ -64,7 +64,54 @@ namespace MTRAN.Interpreter
         {
             Token token = _currentToken;
             
+            if (token.TokenType == PerlToken.POINTER_HASH)
+            {
+                Eat(PerlToken.POINTER_HASH); // Consume the POINTER_HASH token
 
+                // Handle hash access with braces
+                if (_currentToken.TokenType == PerlToken.LBRACE)
+                {
+                    Eat(PerlToken.LBRACE); // Consume the opening brace
+
+                    // Parse the key inside the braces
+                    ASTNode key;
+                    if (_currentToken.TokenType == PerlToken.STRING || _currentToken.TokenType == PerlToken.IDENT)
+                    {
+                        key = new StringNode(_currentToken.Lexeme); // Handle quoted keys or identifiers
+                        Eat(_currentToken.TokenType);
+                    }
+                    else
+                    {
+                        throw new Exception($"Expected hash key (STRING or IDENT), got {_currentToken.TokenType} at line {_currentToken.Line}.");
+                    }
+
+                    // Expect the closing brace '}'
+                    if (_currentToken.TokenType != PerlToken.RBRACE)
+                    {
+                        throw new Exception($"Expected '}}' after hash key, got {_currentToken.TokenType} at line {_currentToken.Line}.");
+                    }
+                    Eat(PerlToken.RBRACE); // Consume the closing brace
+
+                    // Check if this is an assignment
+                    if (_currentToken.TokenType == PerlToken.ASSIGN)
+                    {
+                        Eat(PerlToken.ASSIGN);
+                        ASTNode value = Expr(); // Parse the value being assigned
+                        return new HashElementAssignmentNode(null, key, value); // Return a HashElementAssignmentNode
+                    }
+
+                    return new HashAccessNode(null, key); // Return a HashAccessNode for access
+                }
+
+                throw new Exception($"Expected '{{' after '->', got {_currentToken.TokenType} at line {_currentToken.Line}.");
+            }
+            if (token.TokenType == PerlToken.REF_HASH)
+            {
+                // Handle the REF_HASH token
+                string referencedVariable = token.Lexeme;
+                Eat(PerlToken.REF_HASH); // Consume the REF_HASH token
+                return new ReferenceNode(referencedVariable); // Return a ReferenceNode
+            }
             if (token.TokenType == PerlToken.USE)
             {
                 Eat(PerlToken.USE);
@@ -97,6 +144,7 @@ namespace MTRAN.Interpreter
                 Eat(PerlToken.NUMBER);
                 return new NumberNode(float.Parse(token.Lexeme));
             }
+            
             else if (token.TokenType == PerlToken.INT)
             {
                 Eat(PerlToken.INT);
@@ -252,10 +300,10 @@ namespace MTRAN.Interpreter
                     {
                         Eat(PerlToken.HASH_ASSIGN);
                     }
-                    else
-                    {
-                        throw new Exception($"Expected '=>' for object property assignment, got {_currentToken.TokenType} at line {_currentToken.Line}.");
-                    }
+                    // else
+                    // {
+                    //     throw new Exception($"Expected '=>' for object property assignment, got {_currentToken.TokenType} at line {_currentToken.Line}.");
+                    // }
 
                     // Parse the value
                     ASTNode value = Expr();
@@ -698,13 +746,29 @@ namespace MTRAN.Interpreter
             if (_currentToken.TokenType == PerlToken.IDENT)
             {
                 string variableName = _currentToken.Lexeme;
-
-                // Validate variable name starts with $, @, or %
                 if (!variableName.StartsWith("$") && !variableName.StartsWith("@") && !variableName.StartsWith("%"))
                 {
                     string errorMessage = $"Invalid variable name '{variableName}' at line {_currentToken.Line}. Variable names must start with $, @, or %.";
                     LogError(errorMessage);
                     throw new Exception(errorMessage);
+                }
+            }
+
+
+            if (_currentToken.TokenType == PerlToken.REF_HASH)
+            {
+                Console.WriteLine("1111111111111111111111111");
+                string referencedVariable = _currentToken.Lexeme;
+                Eat(PerlToken.REF_HASH); // Consume the REF_HASH token
+
+                ASTNode referenceNode = new ReferenceNode(referencedVariable);
+                if (isDeclaration)
+                {
+                    return new VariableDeclarationNode(keyword, _currentToken.Lexeme, referenceNode);
+                }
+                else
+                {
+                    return new AssignmentNode(_currentToken.Lexeme, referenceNode);
                 }
             }
 
@@ -1040,6 +1104,11 @@ namespace MTRAN.Interpreter
                     }
                 }
                 Eat(PerlToken.RPAREN);
+            }
+            else
+            {
+                // If no parentheses, assume arguments will be accessed via @_ array
+                parameters.Add(new VariableNode("@_"));
             }
 
             // Handle assignment to parameters (e.g., my ($age) = @_;)

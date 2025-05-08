@@ -38,7 +38,7 @@ namespace MTRAN.Interpreter
                     Console.WriteLine("File content successfully read:\n" + fileContent);
 
                     // Tokenize and parse the Perl code
-                    var lexer = new PerlLexer(fileContent);
+                    var lexer = new PerlLexerParser(fileContent);
                     lexer.Tokenize();
                     var parser = new Parser(lexer);
                     ASTNode ast = parser.Parse();

@@ -100,7 +100,10 @@ namespace MTRAN.Interpreter
         BLESS,
         NEW,
         SHIFT,
-        NEXT
+        NEXT,
+        REF_HASH,
+
+        POINTER_HASH,
     }
     
     public class TokenDictionary
@@ -133,12 +136,14 @@ namespace MTRAN.Interpreter
             // { PerlToken.COMMENT, @"#.*" },                      // comment (single line)
             
             /* Special tokens */
+            { PerlToken.POINTER_HASH, @"->" },                         // assignment (e.g., =)
             { PerlToken.SHIFT, @"\bshift\b" },                        // my (e.g., my)
             { PerlToken.NEW, @"\new\b" },                        // my (e.g., my)
+            { PerlToken.REF_HASH, @"\\%[a-zA-Z_]\w*" },
             { PerlToken.IDENT, @"[\$@%][a-zA-Z_]\w*" },                // variable (e.g., $a, $var_name)
 
             { PerlToken.EQUAL, @"==" },                         // equality (e.g., ==)
-            { PerlToken.ASSIGN, @"=" },                         // assignment (e.g., =)
+            { PerlToken.ASSIGN, @"=" },
             { PerlToken.INT, @"\b[0-9]+\b" },                      // integer (e.g., 123)
             { PerlToken.STRING, @"(['""])(?:(?=(\\?))\2.)*?\1" },            // string (e.g., 'abc')
             { PerlToken.NUMBER, @"\b\d+(\.\d+)?([eE][-+]?\d+)?\b" }, // float (e.g., 123.45, 1e+300)

@@ -1,16 +1,42 @@
 namespace MTRAN.Semantic
 {
-    public abstract class ASTNode
+   public abstract class ASTNode
     {
     }
 
-    public class ProgramNode : ASTNode
+    public class NextNode : ASTNode
     {
-        public List<ASTNode> Children { get; }
+        public ASTNode? Condition { get; }
 
-        public ProgramNode(List<ASTNode> children)
+        public NextNode(ASTNode? condition = null)
         {
-            Children = children;
+            Condition = condition;
+        }
+
+        public override string ToString()
+        {
+            return Condition != null
+                ? $"Continue operation (Condition: {Condition})"
+                : "Continue operation";
+        }
+    }
+
+    public class LastNode : ASTNode
+    {
+        public ASTNode? Condition { get; }
+        public string? Label { get; }
+
+        public LastNode(ASTNode? condition = null, string? label = null)
+        {
+            Condition = condition;
+            Label = label;
+        }
+
+        public override string ToString()
+        {
+            return Condition != null
+                ? $"Break operation (Condition: {Condition}, Label: {Label})"
+                : $"Break operation (Label: {Label})";
         }
     }
 
@@ -72,6 +98,30 @@ namespace MTRAN.Semantic
         }
     }
 
+    public class ArrayAccessNode : ASTNode
+    {
+        public string ArrayName { get; }
+        public ASTNode Index { get; }
+
+        public ArrayAccessNode(string arrayName, ASTNode index)
+        {
+            ArrayName = arrayName;
+            Index = index;
+        }
+    }
+
+    public class HashAccessNode : ASTNode
+    {
+        public string HashName { get; }
+        public ASTNode Key { get; }
+
+        public HashAccessNode(string hashName, ASTNode key)
+        {
+            HashName = hashName;
+            Key = key;
+        }
+    }
+
     public class ElseIfNode : ASTNode
     {
         public ASTNode Condition { get; }
@@ -81,6 +131,56 @@ namespace MTRAN.Semantic
         {
             Condition = condition;
             ThenBranch = thenBranch;
+        }
+    }
+
+    public class InterpolatedStringNode : ASTNode
+    {
+        public List<ASTNode> Parts { get; }
+
+        public InterpolatedStringNode(List<ASTNode> parts)
+        {
+            Parts = parts;
+        }
+    }
+
+    public class UseNode : ASTNode
+    {
+        public string ConstantName { get; }
+        public ASTNode Value { get; }
+
+        public UseNode(string constantName, ASTNode value)
+        {
+            ConstantName = constantName;
+            Value = value;
+        }
+    }
+
+    public class ArrayElementAssignmentNode : ASTNode
+    {
+        public string ArrayName { get; }
+        public ASTNode Index { get; }
+        public ASTNode Value { get; }
+
+        public ArrayElementAssignmentNode(string arrayName, ASTNode index, ASTNode value)
+        {
+            ArrayName = arrayName;
+            Index = index;
+            Value = value;
+        }
+    }
+
+    public class HashElementAssignmentNode : ASTNode
+    {
+        public string HashName { get; }
+        public ASTNode Key { get; }
+        public ASTNode Value { get; }
+
+        public HashElementAssignmentNode(string hashName, ASTNode key, ASTNode value)
+        {
+            HashName = hashName;
+            Key = key;
+            Value = value;
         }
     }
 
@@ -202,18 +302,6 @@ namespace MTRAN.Semantic
         }
     }
 
-    public class ObjectNode : ASTNode
-    {
-        public string Name { get; }
-        public List<(ASTNode Key, ASTNode Value)> Properties { get; }
-
-        public ObjectNode(string name, List<(ASTNode Key, ASTNode Value)> properties)
-        {
-            Name = name;
-            Properties = properties;
-        }
-    }
-
     public class UnaryOperationNode : ASTNode
     {
         public string Variable { get; }
@@ -263,20 +351,20 @@ namespace MTRAN.Semantic
     }
 
     public class FunctionNode : ASTNode
+{
+    public string Name { get; }
+    public List<ASTNode> Parameters { get; }
+    public ASTNode Body { get; }
+
+    public FunctionNode(string name, List<ASTNode> parameters, ASTNode body)
     {
-        public string Name { get; }
-        public List<ASTNode> Parameters { get; }
-        public ASTNode Body { get; }
-
-        public FunctionNode(string name, List<ASTNode> parameters, ASTNode body)
-        {
-            Name = name;
-            Parameters = parameters;
-            Body = body;
-        }
-
-
+        Name = name;
+        Parameters = parameters;
+        Body = body;
     }
+
+
+}
 
     public class ArrayNode : ASTNode
     {
@@ -368,6 +456,43 @@ namespace MTRAN.Semantic
             Methods = methods;
         }
 
+    }
+
+    public class ObjectNode : ASTNode
+    {
+        public string Name { get; }
+        public List<(ASTNode Key, ASTNode Value)> Properties { get; }
+
+        public ObjectNode(string name, List<(ASTNode Key, ASTNode Value)> properties)
+        {
+            Name = name;
+            Properties = properties;
+        }
+    }
+
+    public class ErrorNode : ASTNode
+    {
+        public string ErrorMessage { get; }
+
+        public ErrorNode(string errorMessage)
+        {
+            ErrorMessage = errorMessage;
+        }
+
+        public override string ToString()
+        {
+            return $"Error: {ErrorMessage}";
+        }
+    }
+
+    public class ProgramNode : ASTNode
+    {
+        public List<ASTNode> Children { get; }
+
+        public ProgramNode(List<ASTNode> children)
+        {
+            Children = children;
+        }
     }
 
     public class BlessNode : ASTNode

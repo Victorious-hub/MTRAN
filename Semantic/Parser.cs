@@ -63,7 +63,35 @@ namespace MTRAN.Semantic
         private ASTNode Factor()
         {
             Token token = _currentToken;
+            
 
+            if (token.TokenType == PerlToken.USE)
+            {
+                Eat(PerlToken.USE);
+
+                // Parse the constant or module name
+                if (_currentToken.TokenType != PerlToken.IDENT)
+                {
+                    throw new Exception($"Expected identifier after 'use', got {_currentToken.TokenType} at line {_currentToken.Line}.");
+                }
+                string constantName = _currentToken.Lexeme;
+                Eat(PerlToken.IDENT);
+
+                // Expect the hash assignment operator (=>)
+                if (_currentToken.TokenType == PerlToken.HASH_ASSIGN)
+                {
+                    Eat(PerlToken.HASH_ASSIGN);
+                }
+                else
+                {
+                    throw new Exception($"Expected '=>' after constant name, got {_currentToken.TokenType} at line {_currentToken.Line}.");
+                }
+
+                // Parse the value assigned to the constant
+                ASTNode value = Expr();
+
+                return new UseNode(constantName, value); // Return a UseNode
+            }
             if (token.TokenType == PerlToken.NUMBER)
             {
                 Eat(PerlToken.NUMBER);
@@ -78,6 +106,40 @@ namespace MTRAN.Semantic
             {
                 string functionName = token.Lexeme;
                 Eat(PerlToken.IDENT);
+
+                if (_currentToken.TokenType == PerlToken.LBRACKET)
+                {
+                    Eat(PerlToken.LBRACKET);
+                    ASTNode index = Expr(); // Parse the index expression
+                    Eat(PerlToken.RBRACKET);
+
+                    // Check if this is an array element assignment
+                    if (_currentToken.TokenType == PerlToken.ASSIGN)
+                    {
+                        Eat(PerlToken.ASSIGN);
+                        ASTNode value = Expr(); // Parse the value being assigned
+                        return new ArrayElementAssignmentNode(functionName, index, value); // Return an ArrayElementAssignmentNode
+                    }
+
+                    return new ArrayAccessNode(functionName, index); // Return an ArrayAccessNode for access
+                }
+
+                if (_currentToken.TokenType == PerlToken.LBRACE)
+                {
+                    Eat(PerlToken.LBRACE);
+                    ASTNode key = Expr(); // Parse the key inside the braces
+                    Eat(PerlToken.RBRACE);
+
+                    // Check if this is a hash element assignment
+                    if (_currentToken.TokenType == PerlToken.ASSIGN)
+                    {
+                        Eat(PerlToken.ASSIGN);
+                        ASTNode value = Expr(); // Parse the value being assigned
+                        return new HashElementAssignmentNode(functionName, key, value); // Return a HashElementAssignmentNode
+                    }
+
+                    return new HashAccessNode(functionName, key); // Return a HashAccessNode for access
+                }
 
                 // Check if this is a function call
                 if (_currentToken.TokenType == PerlToken.LPAREN)
@@ -138,10 +200,8 @@ namespace MTRAN.Semantic
             {
                 Eat(PerlToken.BLESS);
 
-                // Parse the object being blessed
-                ASTNode obj = Factor(); // This will now handle ObjectNode
+                ASTNode obj = Factor();
 
-                // Optionally, parse the class name (if provided)
                 ASTNode cls = null;
                 if (_currentToken.TokenType == PerlToken.COMMA)
                 {
@@ -360,7 +420,7 @@ namespace MTRAN.Semantic
             {
                 Eat(PerlToken.ELSIF);
                 Eat(PerlToken.LPAREN);
-                ASTNode elseIfCondition = Expr();
+                ASTNode elseIfCondition = new ParenthesizedExpression(Expr());
                 Eat(PerlToken.RPAREN);
                 Eat(PerlToken.LBRACE);
                 ASTNode elseIfThenBranch = ParseBlock();
@@ -466,10 +526,59 @@ namespace MTRAN.Semantic
             {
                 return ClassDeclaration();
             }
+            else if (_currentToken.TokenType == PerlToken.NEXT) // Handle 'next' keyword
+            {
+                return NextStatement();
+            }
+            else if (_currentToken.TokenType == PerlToken.LAST) // Handle 'last' keyword
+            {
+                return LastStatement();
+            }
             else
             {
                 return Expr();
             }
+        }
+
+        private ASTNode NextStatement()
+        {
+            Eat(PerlToken.NEXT); // Consume the 'next' token
+
+            // Check if the 'next' statement is part of an 'if' condition
+            if (_currentToken.TokenType == PerlToken.IF)
+            {
+                Eat(PerlToken.IF); // Consume the 'if' keyword
+                Eat(PerlToken.LPAREN); // Consume the opening parenthesis
+                ASTNode condition = Expr(); // Parse the condition
+                Eat(PerlToken.RPAREN); // Consume the closing parenthesis
+                return new NextNode(condition); // Return a NextNode with the condition
+            }
+
+            return new NextNode(); // Return a NextNode without a condition
+        }
+
+        private ASTNode LastStatement()
+        {
+            Eat(PerlToken.LAST); // Consume the 'last' token
+
+            string? label = null;
+            if (_currentToken.TokenType == PerlToken.IDENT)
+            {
+                label = _currentToken.Lexeme; // Get the label
+                Eat(PerlToken.IDENT); // Consume the label
+            }
+
+            // Check if the 'last' statement is part of an 'if' condition
+            if (_currentToken.TokenType == PerlToken.IF)
+            {
+                Eat(PerlToken.IF); // Consume the 'if' keyword
+                Eat(PerlToken.LPAREN); // Consume the opening parenthesis
+                ASTNode condition = Expr(); // Parse the condition
+                Eat(PerlToken.RPAREN); // Consume the closing parenthesis
+                return new LastNode(condition, label); // Return a LastNode with the condition and label
+            }
+
+            return new LastNode(null, label); // Return a LastNode with only the label
         }
 
         private ASTNode ClassDeclaration()
@@ -545,6 +654,7 @@ namespace MTRAN.Semantic
                 isDeclaration = true;
                 keyword = "my";
             }
+
 
             if (_currentToken.TokenType == PerlToken.LPAREN)
             {
@@ -840,7 +950,7 @@ namespace MTRAN.Semantic
             ASTNode body = ParseBlock();
             Eat(PerlToken.RBRACE);
 
-            return new ForNode(forExpression, null, null, body);
+            return new ForNode(forExpression, condition, increment, body);
         }
 
         

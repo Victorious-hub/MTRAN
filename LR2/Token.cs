@@ -6,6 +6,7 @@ namespace MTRAN.LR2
 {
     public enum PerlToken
     {
+        LAST,
         /* Special tokens */
         ILLEGAL,
         EOF_,
@@ -95,14 +96,21 @@ namespace MTRAN.LR2
         FUNC_SUB,           // sub(func declaration)
         USE,                // use
 
-        HASH_ASSIGN               //: '=>' ;
-
+        HASH_ASSIGN   ,            //: '=>' ;
+        BLESS,
+        NEW,
+        SHIFT,
+        NEXT
     }
     
     public class TokenDictionary
     {
         public readonly Dictionary<PerlToken, string> KeywordPatterns = new()
         {
+            { PerlToken.NEXT, @"\bnext\b" },
+            { PerlToken.LAST, @"\blast\b" },                        // last (e.g., last)
+            { PerlToken.BLESS, @"\bbless\b" },                        // my (e.g., my)
+            { PerlToken.NEW, @"\bnew\b" },                        // my (e.g., my)
             { PerlToken.MY, @"\bmy\b" },                        // my (e.g., my)
             { PerlToken.IF, @"\bif\b" },                        // if (e.g., if)
             { PerlToken.ELSE, @"\belse\b" },                    // else (e.g., else)
@@ -115,7 +123,7 @@ namespace MTRAN.LR2
             { PerlToken.FOREACH, @"\bforeach\b" },              // foreach (e.g., foreach)
             { PerlToken.GOTO, @"\bgoto\b" },                    // goto (e.g., goto)
             { PerlToken.PACKAGE, @"\bpackage\b" },              // package (e.g., package)
-            { PerlToken.FUNC_SUB, @"\bsub\b" },                 // sub (e.g., sub)
+            { PerlToken.SUB, @"\bsub\b" },                 // sub (e.g., sub)
             { PerlToken.USE, @"\buse\b" },                      // use (e.g., use)
         };
 
@@ -125,6 +133,8 @@ namespace MTRAN.LR2
             // { PerlToken.COMMENT, @"#.*" },                      // comment (single line)
             
             /* Special tokens */
+            { PerlToken.SHIFT, @"\bshift\b" },                        // my (e.g., my)
+            { PerlToken.NEW, @"\new\b" },                        // my (e.g., my)
             { PerlToken.IDENT, @"[\$@%][a-zA-Z_]\w*" },                // variable (e.g., $a, $var_name)
 
             { PerlToken.EQUAL, @"==" },                         // equality (e.g., ==)

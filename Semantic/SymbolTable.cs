@@ -4,7 +4,7 @@ namespace MTRAN.Semantic
     {
         private readonly Stack<Dictionary<string, string>> _scopes = new Stack<Dictionary<string, string>>();
         private readonly Stack<string> _scopeNames = new Stack<string>(); // Track scope names
-        private readonly Dictionary<string, int> _functions = new Dictionary<string, int>(); // Function name and parameter count
+        private readonly Dictionary<string, FunctionInfo> _functions = new();
         private readonly Dictionary<string, string> _symbols = new Dictionary<string, string>(); // Global symbols (e.g., classes)
         private readonly List<(string ScopeName, Dictionary<string, string> Variables)> _reservedScopes = new List<(string, Dictionary<string, string>)>();
 
@@ -27,15 +27,9 @@ namespace MTRAN.Semantic
             _scopeNames.Push("Global");
         }
 
-        public void DeclareFunction(string functionName, int parameterCount)
+        public void DeclareFunction(string name, List<string> parameterTypes, string returnType)
         {
-            if (_functions.ContainsKey(functionName))
-            {
-                throw new Exception($"Semantic Error: Function '{functionName}' is already declared.");
-            }
-
-            _functions[functionName] = parameterCount;
-            Console.WriteLine($"[DEBUG] Declared function '{functionName}' with {parameterCount} parameters.");
+            _functions[name] = new FunctionInfo(parameterTypes, returnType);
         }
 
         public bool IsFunctionDeclared(string functionName)
@@ -50,7 +44,13 @@ namespace MTRAN.Semantic
                 throw new Exception($"Semantic Error: Function '{functionName}' is not declared.");
             }
 
-            return _functions[functionName];
+            // Access the ParameterTypes.Count property of the FunctionInfo object
+            return _functions[functionName].ParameterTypes.Count;
+        }
+
+        public FunctionInfo GetFunctionInfo(string name)
+        {
+            return _functions[name];
         }
 
         public void EnterScope(string scopeName)
@@ -164,5 +164,17 @@ namespace MTRAN.Semantic
                 }
             }
         }
+    }
+}
+
+public class FunctionInfo
+{
+    public List<string> ParameterTypes { get; }
+    public string ReturnType { get; }
+
+    public FunctionInfo(List<string> parameterTypes, string returnType)
+    {
+        ParameterTypes = parameterTypes;
+        ReturnType = returnType;
     }
 }

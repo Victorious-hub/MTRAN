@@ -32,7 +32,7 @@ namespace MTRAN.Parser
                     string fileContent = System.IO.File.ReadAllText(filePath);
                     Console.WriteLine("File content successfully read:\n" + fileContent);
 
-                    var lexer = new PerlLexer(fileContent);
+                    var lexer = new PerlLexerParser(fileContent);
                     lexer.Tokenize();
                     // lexer.PrintUniqueTokens();
                     var parser = new Parser(lexer);
@@ -61,11 +61,41 @@ namespace MTRAN.Parser
                 Console.WriteLine(prefix);
                 prefix = "  ";
             }
+            if (node is LastNode lastNode)
+            {
+                Console.WriteLine(prefix + "Break operation");
 
+                // Print the condition if it exists
+                if (lastNode.Condition != null)
+                {
+                    Console.WriteLine(prefix + "  Condition:");
+                    PrintAST(lastNode.Condition, indent + 4, prefix + "    ");
+                }
+            }
+            if (node is ReferenceNode referenceNode)
+            {
+                Console.WriteLine(prefix + "Reference:");
+                Console.WriteLine(prefix + "    Referenced Variable: " + referenceNode.ReferencedVariable);
+            }
             if (node is ErrorNode errorNode)
             {
                 Console.WriteLine(prefix + "Error:");
                 Console.WriteLine(prefix + "├── Message: " + errorNode.ErrorMessage);
+            }
+            if (node is ImplicitParameterNode implicitParameterNode)
+            {
+                Console.WriteLine(prefix + "Implicit Parameter:");
+                Console.WriteLine(prefix + "    Name: " + implicitParameterNode.ParameterName);
+
+                if (implicitParameterNode.Value != null)
+                {
+                    Console.WriteLine(prefix + "    Value:");
+                    PrintAST(implicitParameterNode.Value, indent + 4, prefix + "        ");
+                }
+                else
+                {
+                    Console.WriteLine(prefix + "    Value: (null)");
+                }
             }
             else if (node is StatementListNode statementList)
             {
@@ -247,14 +277,7 @@ namespace MTRAN.Parser
                 Console.WriteLine(prefix + "    Parameters:");
                 foreach (var parameter in functionNode.Parameters)
                 {
-                    if (parameter is VariableDeclarationNode declaration1)
-                    {
-                        Console.WriteLine(prefix + "        Variable: " + declaration1.Variable);
-                    }
-                    else if (parameter is VariableNode variable1)
-                    {
-                        Console.WriteLine(prefix + "        Variable: " + variable1.Name);
-                    }
+                    PrintAST(parameter, indent + 4, prefix + "        ");
                 }
                 Console.WriteLine(prefix + "    Body:");
                 PrintAST(functionNode.Body, indent + 8, prefix + "    ");

@@ -4,6 +4,9 @@ namespace MTRAN.Semantic
     {
         private readonly SymbolTable _symbolTable = new SymbolTable();
         private readonly List<string> _errors = new List<string>();
+        private readonly Dictionary<string, FunctionNode> _functionTable = new Dictionary<string, FunctionNode>();
+        private Dictionary<string, object> _variableValues = new Dictionary<string, object>();
+        private bool _skipToNextIteration = false;
 
         public void Analyze(ASTNode node)
         {
@@ -39,16 +42,21 @@ namespace MTRAN.Semantic
             }
             else if (node is AssignmentNode assignmentNode)
             {
-                if (!_symbolTable.IsVariableDeclared(assignmentNode.Variable))
+                if (assignmentNode.Value is HashAccessNode hashAccessNode)
                 {
-                    // Implicitly declare the variable if it is not declared
-                    string inferredType = assignmentNode.Value != null ? InferType(assignmentNode.Value) : "unknown";
-                    _symbolTable.DeclareVariable(assignmentNode.Variable, inferredType);
-                    Console.WriteLine($"[DEBUG] Implicitly declared variable '{assignmentNode.Variable}' with type '{inferredType}'.");
+                    Analyze(hashAccessNode);
                 }
+                else
+                {
+                    if (!_symbolTable.IsVariableDeclared(assignmentNode.Variable))
+                    {
+                        string inferredType = assignmentNode.Value != null ? InferType(assignmentNode.Value) : "unknown";
+                        _symbolTable.DeclareVariable(assignmentNode.Variable, inferredType);
+                        Console.WriteLine($"[DEBUG] Implicitly declared variable '{assignmentNode.Variable}' with type '{inferredType}'.");
+                    }
 
-                // Analyze the value being assigned
-                Analyze(assignmentNode.Value);
+                    Analyze(assignmentNode.Value);
+                }
             }
             else if (node is IfNode ifNode)
             {
@@ -150,6 +158,34 @@ namespace MTRAN.Semantic
                     AddError($"Semantic Error: Variable '{variableNode.Name}' is not declared.");
                 }
             }
+            else if (node is CompoundAssignmentNode compoundAssignmentNode)
+            {
+                Console.WriteLine($"[DEBUG] Analyzing compound assignment '{compoundAssignmentNode.OperatorSymbol}' for variable '{compoundAssignmentNode.Variable}'.");
+
+                // Check if the variable is declared
+                if (!_symbolTable.IsVariableDeclared(compoundAssignmentNode.Variable))
+                {
+                    AddError($"Semantic Error: Variable '{compoundAssignmentNode.Variable}' is not declared.");
+                    return;
+                }
+
+                // Infer the type of the variable and the value
+                string variableType = _symbolTable.GetVariableType(compoundAssignmentNode.Variable);
+                string valueType = InferType(compoundAssignmentNode.Value);
+
+                // Ensure the operator is valid for the types
+                if ((variableType == "int" || variableType == "float") && (valueType == "int" || valueType == "float"))
+                {
+                    // Valid for numeric types
+                }
+                else
+                {
+                    AddError($"Semantic Error: Operator '{compoundAssignmentNode.OperatorSymbol}' is not valid for types '{variableType}' and '{valueType}'.");
+                }
+
+                // Analyze the value expression
+                Analyze(compoundAssignmentNode.Value);
+            }
             else if (node is ParenthesizedExpression parenthesizedExpression)
             {
                 Analyze(parenthesizedExpression.Expression);
@@ -177,25 +213,30 @@ namespace MTRAN.Semantic
                 _symbolTable.EnterScope("For");
                 try
                 {
+                    // Analyze the initialization
                     if (forNode.Initialization != null)
                     {
                         Analyze(forNode.Initialization);
                     }
 
+                    // Analyze the condition
                     if (forNode.Condition != null)
                     {
-                        if (!IsNumeric(forNode.Condition))
+                        string conditionType = InferType(forNode.Condition);
+                        if (conditionType != "bool")
                         {
-                            AddError($"Semantic Error: The condition in the 'for' loop must be numeric.");
+                            AddError($"Semantic Error: The condition in the 'for' loop must be boolean, but got '{conditionType}'.");
                         }
                         Analyze(forNode.Condition);
                     }
 
+                    // Analyze the increment
                     if (forNode.Increment != null)
                     {
                         Analyze(forNode.Increment);
                     }
 
+                    // Analyze the body
                     if (forNode.Body != null)
                     {
                         Analyze(forNode.Body);
@@ -276,7 +317,30 @@ namespace MTRAN.Semantic
                 }
                 else
                 {
-                    _symbolTable.DeclareFunction(functionNode.Name, functionNode.Parameters.Count);
+                    // Infer the return type of the function
+                    string returnType = "void";
+                    if (functionNode.Body is BlockNode blockNode1)
+                    {
+                        foreach (var statement in blockNode1.Statements)
+                        {
+                            if (statement is ReturnNode returnNode && returnNode.Value != null)
+                            {
+                                string inferredReturnType = InferType(returnNode.Value);
+                                if (returnType == "void")
+                                {
+                                    returnType = inferredReturnType;
+                                }
+                                else if (returnType != inferredReturnType)
+                                {
+                                    AddError($"Semantic Error: Function '{functionNode.Name}' has inconsistent return types: '{returnType}' and '{inferredReturnType}'.");
+                                }
+                            }
+                        }
+                    }
+
+                    // Declare the function with its parameter count and return type
+                    var parameterTypes = functionNode.Parameters.Select(_ => "unknown").ToList();
+                    _symbolTable.DeclareFunction(functionNode.Name, parameterTypes, returnType);
                 }
 
                 _symbolTable.EnterScope($"Function-{functionNode.Name}");
@@ -328,14 +392,22 @@ namespace MTRAN.Semantic
             }
             else if (node is ForeachNode foreachNode)
             {
-                Analyze(foreachNode.Array);
+                string arrayType = InferType(foreachNode.Array);
+
+                if (!arrayType.StartsWith("array<"))
+                {
+                    AddError($"Semantic Error: The foreach loop requires an array to iterate over, but got '{arrayType}'.");
+                    return;
+                }
+
+                string elementType = arrayType.Substring(6, arrayType.Length - 7);
 
                 _symbolTable.EnterScope("Foreach");
                 try
                 {
                     if (foreachNode.VariableDeclaration is VariableDeclarationNode variableDeclaration)
                     {
-                        _symbolTable.DeclareVariable(variableDeclaration.Variable, "unknown");
+                        _symbolTable.DeclareVariable(variableDeclaration.Variable, elementType);
                     }
 
                     Analyze(foreachNode.Body);
@@ -378,8 +450,70 @@ namespace MTRAN.Semantic
                     _symbolTable.ExitScope();
                 }
             }
+            else if (node is UseNode useNode)
+            {
+                // Analyze the value being assigned to the constant
+                Analyze(useNode.Value);
+
+                // Declare the constant in the symbol table
+                if (!_symbolTable.IsVariableDeclared(useNode.ConstantName))
+                {
+                    _symbolTable.DeclareVariable(useNode.ConstantName, InferType(useNode.Value));
+                }
+                else
+                {
+                    AddError($"Semantic Error: Constant '{useNode.ConstantName}' is already declared.");
+                }
+            }
+            else if (node is LastNode lastNode)
+            {
+                Console.WriteLine("[DEBUG] Analyzing LastNode...");
+
+                // Analyze the condition if it exists
+                if (lastNode.Condition != null)
+                {
+                    Analyze(lastNode.Condition);
+                }
+            }
+            else if (node is ArrayAccessNode arrayAccessNode)
+            {
+                // Check if the array is declared
+                string arrayName = "@" + arrayAccessNode.ArrayName.Substring(1); // Convert $a to @a
+                if (!_symbolTable.IsVariableDeclared(arrayName))
+                {
+                    AddError($"Semantic Error: Array '{arrayName}' is not declared.");
+                }
+                else
+                {
+                    // Analyze the index expression
+                    Analyze(arrayAccessNode.Index);
+
+                    // Ensure the index is numeric
+                    if (!IsNumeric(arrayAccessNode.Index))
+                    {
+                        AddError($"Semantic Error: Index for array '{arrayName}' must be numeric.");
+                    }
+                }
+            }
             else if (node is HashNode hashNode)
             {
+                string hashName = hashNode.Name; // Assuming HashNode has a Name property
+
+                if (!_symbolTable.IsVariableDeclared(hashName))
+                {
+                    // Infer the types of the keys and values
+                    string keyType = hashNode.Elements.Count > 0 ? InferType(hashNode.Elements[0].Key) : "unknown";
+                    string valueType = hashNode.Elements.Count > 0 ? InferType(hashNode.Elements[0].Value) : "unknown";
+
+                    // Declare the hash variable in the symbol table
+                    _symbolTable.DeclareVariable(hashName, $"hash<{keyType}, {valueType}>");
+                }
+                else
+                {
+                    Console.WriteLine($"[DEBUG] Variable '{hashName}' is already declared. Skipping declaration.");
+                }
+
+                // Analyze the elements of the hash
                 foreach (var element in hashNode.Elements)
                 {
                     Analyze(element.Key);
@@ -402,6 +536,95 @@ namespace MTRAN.Semantic
                 else
                 {
                     AddError($"Semantic Error: Invalid class reference in 'bless' statement.");
+                }
+            }
+            else if (node is NextNode nextNode)
+            {
+                Console.WriteLine("[DEBUG] Analyzing NextNode...");
+
+                // Analyze the condition if it exists
+                if (nextNode.Condition != null)
+                {
+                    Analyze(nextNode.Condition);
+                }
+            }
+            else if (node is HashElementAssignmentNode hashElementAssignmentNode)
+            {
+                string hashName = hashElementAssignmentNode.HashName;
+
+                if (!_symbolTable.IsVariableDeclared(hashName))
+                {
+                    AddError($"Semantic Error: Variable '{hashName}' is not declared.");
+                }
+                else
+                {
+                    string hashType = _symbolTable.GetVariableType(hashName);
+                    if (!hashType.StartsWith("hash<"))
+                    {
+                        AddError($"Semantic Error: '{hashName}' is not a hash.");
+                    }
+                    else
+                    {
+                        // Analyze the key and value
+                        Analyze(hashElementAssignmentNode.Key);
+                        Analyze(hashElementAssignmentNode.Value);
+
+                        // Ensure the key type matches the hash's key type
+                        string expectedKeyType = hashType.Split('<', ',')[1].Trim();
+                        string actualKeyType = InferType(hashElementAssignmentNode.Key);
+                        if (expectedKeyType != "unknown" && expectedKeyType != actualKeyType)
+                        {
+                            AddError($"Semantic Error: Key type mismatch for hash '{hashName}'. Expected '{expectedKeyType}', got '{actualKeyType}'.");
+                        }
+
+                        // Ensure the value type matches the hash's value type
+                        string expectedValueType = hashType.Split(',')[1].TrimEnd('>');
+                        string actualValueType = InferType(hashElementAssignmentNode.Value);
+                        if (expectedValueType != "unknown" && expectedValueType != actualValueType)
+                        {
+                            AddError($"Semantic Error: Value type mismatch for hash '{hashName}'. Expected '{expectedValueType}', got '{actualValueType}'.");
+                        }
+                    }
+                }
+            }
+            else if (node is HashAccessNode hashAccessNode1)
+            {
+                string hashName = hashAccessNode1.HashName;
+                Console.WriteLine($"[DEBUG] Analyzing hash access for '{hashName}'.");
+                // Convert scalar reference ($person) to hash reference (%person)
+                if (hashName.StartsWith("$"))
+                {
+                    string potentialHashName = "%" + hashName.Substring(1);
+                    if (_symbolTable.IsVariableDeclared(potentialHashName))
+                    {
+                        hashName = potentialHashName;
+                    }
+                }
+
+                if (!_symbolTable.IsVariableDeclared(hashName))
+                {
+                    AddError($"Semantic Error: Hash '{hashName}' is not declared.");
+                }
+                else
+                {
+                    string hashType = _symbolTable.GetVariableType(hashName);
+                    if (!hashType.StartsWith("hash<"))
+                    {
+                        AddError($"Semantic Error: '{hashName}' is not a hash.");
+                    }
+                    else
+                    {
+                        // Analyze the key
+                        Analyze(hashAccessNode1.Key);
+
+                        // Ensure the key type matches the hash's key type
+                        string expectedKeyType = hashType.Split('<', ',')[1].Trim();
+                        string actualKeyType = InferType(hashAccessNode1.Key);
+                        if (expectedKeyType != "unknown" && expectedKeyType != actualKeyType)
+                        {
+                            AddError($"Semantic Error: Key type mismatch for hash '{hashName}'. Expected '{expectedKeyType}', got '{actualKeyType}'.");
+                        }
+                    }
                 }
             }
             else if (node is ObjectNode objectNode)
@@ -456,13 +679,62 @@ namespace MTRAN.Semantic
                     AddError($"Semantic Error: Variable '{variableNode.Name}' is not declared.");
                     return "unknown";
                 }
+                if (node is UseNode useNode)
+                {
+                    // Infer the type of the value being assigned
+                    return InferType(useNode.Value);
+                }
+                if (node is ArrayAccessNode arrayAccessNode)
+                {
+                    // Infer the type of the array element
+                    string arrayName = "@" + arrayAccessNode.ArrayName.Substring(1); // Convert $a to @a
+                    string arrayType = InferType(new VariableNode(arrayName));
+                    if (arrayType.StartsWith("array<") && arrayType.EndsWith(">"))
+                    {
+                        return arrayType.Substring(6, arrayType.Length - 7); // Extract the element type
+                    }
+                    AddError($"Semantic Error: '{arrayName}' is not an array.");
+                    return "unknown";
+                }
+                if (node is HashAccessNode hashAccessNode)
+                {
+                    string hashName = hashAccessNode.HashName;
+
+                    // Convert scalar reference ($person) to hash reference (%person)
+                    if (hashName.StartsWith("$"))
+                    {
+                        hashName = "%" + hashName.Substring(1);
+                    }
+
+                    if (!_symbolTable.IsVariableDeclared(hashName))
+                    {
+                        AddError($"Semantic Error: Variable '{hashName}' is not declared.");
+                        return "unknown";
+                    }
+
+                    string hashType = _symbolTable.GetVariableType(hashName);
+                    if (!hashType.StartsWith("hash<"))
+                    {
+                        AddError($"Semantic Error: '{hashName}' is not a hash.");
+                        return "unknown";
+                    }
+
+                    // Return the value type of the hash
+                    return hashType.Split(',')[1].TrimEnd('>');
+                }
                 if (node is IntNode)
                 {
                     return "int";
                 }
-                if (node is NumberNode)
+                if (node is NumberNode numberNode)
                 {
-                    return "float";
+                    // Check if the number contains a dot or scientific notation
+                    string numberString = numberNode.Value.ToString();
+                    if (numberString.Contains('.') || numberString.Contains('e') || numberString.Contains('E'))
+                    {
+                        return "float";
+                    }
+                    return "int";
                 }
                 if (node is StringNode)
                 {
@@ -552,11 +824,29 @@ namespace MTRAN.Semantic
                         return "unknown";
                     }
 
-                    foreach (var argument in functionCallNode.Arguments)
+                    var functionInfo = _symbolTable.GetFunctionInfo(functionCallNode.FunctionName);
+                    int declaredParameterCount = functionInfo.ParameterTypes.Count;
+                    int providedArgumentCount = functionCallNode.Arguments.Count;
+
+                    if (declaredParameterCount != providedArgumentCount)
                     {
-                        Analyze(argument);
+                        AddError($"Semantic Error: Function '{functionCallNode.FunctionName}' expects {declaredParameterCount} arguments but {providedArgumentCount} were provided.");
                     }
-                    return "function";
+                    else
+                    {
+                        for (int i = 0; i < declaredParameterCount; i++)
+                        {
+                            string expectedType = functionInfo.ParameterTypes[i];
+                            string actualType = InferType(functionCallNode.Arguments[i]);
+
+                            if (expectedType != "unknown" && expectedType != actualType)
+                            {
+                                AddError($"Semantic Error: Argument {i + 1} of function '{functionCallNode.FunctionName}' expects type '{expectedType}' but got '{actualType}'.");
+                            }
+                        }
+                    }
+
+                    return functionInfo.ReturnType; // Return the function's return type
                 }
                 if (node is HashNode hashNode)
                 {

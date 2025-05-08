@@ -6,6 +6,7 @@ namespace MTRAN.Parser
 {
     public enum PerlToken
     {
+        LAST,
         /* Special tokens */
         ILLEGAL,
         EOF_,
@@ -98,13 +99,19 @@ namespace MTRAN.Parser
         HASH_ASSIGN   ,            //: '=>' ;
         BLESS,
         NEW,
-        SHIFT
+        SHIFT,
+        NEXT,
+        REF_HASH,
+
+        POINTER_HASH,
     }
     
     public class TokenDictionary
     {
         public readonly Dictionary<PerlToken, string> KeywordPatterns = new()
         {
+            { PerlToken.NEXT, @"\bnext\b" },
+            { PerlToken.LAST, @"\blast\b" },                        // last (e.g., last)
             { PerlToken.BLESS, @"\bbless\b" },                        // my (e.g., my)
             { PerlToken.NEW, @"\bnew\b" },                        // my (e.g., my)
             { PerlToken.MY, @"\bmy\b" },                        // my (e.g., my)
@@ -129,12 +136,14 @@ namespace MTRAN.Parser
             // { PerlToken.COMMENT, @"#.*" },                      // comment (single line)
             
             /* Special tokens */
+            { PerlToken.POINTER_HASH, @"->" },                         // assignment (e.g., =)
             { PerlToken.SHIFT, @"\bshift\b" },                        // my (e.g., my)
             { PerlToken.NEW, @"\new\b" },                        // my (e.g., my)
+            { PerlToken.REF_HASH, @"\\%[a-zA-Z_]\w*" },
             { PerlToken.IDENT, @"[\$@%][a-zA-Z_]\w*" },                // variable (e.g., $a, $var_name)
 
             { PerlToken.EQUAL, @"==" },                         // equality (e.g., ==)
-            { PerlToken.ASSIGN, @"=" },                         // assignment (e.g., =)
+            { PerlToken.ASSIGN, @"=" },
             { PerlToken.INT, @"\b[0-9]+\b" },                      // integer (e.g., 123)
             { PerlToken.STRING, @"(['""])(?:(?=(\\?))\2.)*?\1" },            // string (e.g., 'abc')
             { PerlToken.NUMBER, @"\b\d+(\.\d+)?([eE][-+]?\d+)?\b" }, // float (e.g., 123.45, 1e+300)

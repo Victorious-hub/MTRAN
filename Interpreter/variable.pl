@@ -83,7 +83,7 @@
 # }
 
 # my $name1 = print_name(1, 7);
-# my $nameeeeee = $name1;
+# # my $nameeeeee = $name1;
 
 
 
@@ -135,59 +135,46 @@
 
 # sub sum_elems {
 #     my $total = 0;
-#     foreach my $num (@arr) {
+#     foreach my $num (@_) {
 #        $total += $num;
 #     }
 #     return "Result: $total";
 # }
 
-# my $result = sum_elems();
-# print $result;
+# a = sum_elems(1, 2, 3, 4, 5);
+
+# my $str3 = 'C:\\Users\\User\\Documents\\file.txt';
+# print $str3; # prints "C:\Users\User\Documents\file.txt"
+
+# my $str4 = 'Это строка с \'русскими символами\'';
+# print $str4; # prints "Это строка с 'русскими символами'"
 
 
-# my $a = 0;
-# my $b = 1;
-# my $fib = 0;
-# my $n = 10;
+# my %person = (
+#     "name" => "Alice",
+#     "age"  => 30,
+#     "city" => "New York"
+# );
 
-# for (my $i = 0; $i <= $n; $i++) {
-#     $fib = $a + $b;
-#     $a = $b;
-#     $b = $fib;
-# }
-
-# print $a; # Expected output: 55
+# print (1 + 2) * 3;
 
 
-# my @arr = (3, 17, 9, 5, 21, 8);
-# my $max = $arr[0];
 
-# foreach my $val (@arr) {
-#     if ($val > $max) {
-#         $max = $val;
-#     }
-# }
-
-# print "Maximum is $max\n";  # Вывод: 21
-
-# my $n2 = 5;
-# my $fact = 1;
-
-# for (my $i = 1; $i <= $n2; $i++) {
-#     $fact *= $i;
-# }
-
-# print "Factorial of $n2 is $fact\n";  # Вывод: 120
-
-
-my $n = 100;
-my $sum = 0;
-
-my $i = 1;
-while ($i <= $n) {
-    $sum += $i;
-    $i++;
+sub get_value {
+    my ($hash_ref, $key) = @_;
+    # return $hash_ref->{$key};
 }
 
-print "Sum from 1 to $n is $sum\n";  # Вывод: 5050
+my %person = (
+    "name" => 'Alice',
+    "age" => 30
+);
+my $person_ref = \%person;
+my $name = get_value($person_ref, 'name');
+print "Name: $name\n";
 
+# my $ref = \%person;
+
+# print $ref->{"name"}; # prints "Alice"
+
+# ->

@@ -398,7 +398,7 @@ namespace MTRAN.Interpreter
 
                 if (!arrayType.StartsWith("array<"))
                 {
-                    AddError($"Semantic Error: The foreach loop requires an array to iterate over, but got '{arrayType}'.");
+                    // AddError($"Semantic Error: The foreach loop requires an array to iterate over, but got '{arrayType}'.");
                     return;
                 }
 
@@ -832,7 +832,7 @@ namespace MTRAN.Interpreter
 
                     if (declaredParameterCount != providedArgumentCount)
                     {
-                        AddError($"Semantic Error: Function '{functionCallNode.FunctionName}' expects {declaredParameterCount} arguments but {providedArgumentCount} were provided.");
+                        // AddError($"Semantic Error: Function '{functionCallNode.FunctionName}' expects {declaredParameterCount} arguments but {providedArgumentCount} were provided.");
                     }
                     else
                     {
@@ -1724,7 +1724,7 @@ namespace MTRAN.Interpreter
             }
             else if (node is FunctionCallNode functionCallNode)
             {
-                Console.WriteLine($"[DEBUG] Evaluating function call '{functionCallNode.FunctionName}'.");
+                Console.WriteLine($"[DEBUG] Calling function '{functionCallNode.FunctionName}'.");
 
                 if (!_functionTable.ContainsKey(functionCallNode.FunctionName))
                 {
@@ -1733,23 +1733,41 @@ namespace MTRAN.Interpreter
                 }
 
                 var function = _functionTable[functionCallNode.FunctionName];
-                if (function.Parameters.Count != functionCallNode.Arguments.Count)
-                {
-                    AddError($"Interpretation Error: Function '{functionCallNode.FunctionName}' expects {function.Parameters.Count} arguments but got {functionCallNode.Arguments.Count}.");
-                    return null;
-                }
 
                 // Save the current variable values to restore later
                 var previousVariableValues = new Dictionary<string, object>(_variableValues);
 
-                // Assign arguments to parameters
-                for (int i = 0; i < function.Parameters.Count; i++)
+                // Assign arguments to parameters or @_ array
+                if (function.Parameters.Count == 1 && function.Parameters[0] is VariableNode parameterNode && parameterNode.Name == "@_")
                 {
-                    if (function.Parameters[i] is VariableNode parameterNode)
+                    // Populate @_ with the arguments
+                    var argumentValues = functionCallNode.Arguments.Select(Evaluate).ToList();
+                    _variableValues["@_"] = argumentValues;
+                    Console.WriteLine($"[DEBUG] @_ = [{string.Join(", ", argumentValues)}]");
+
+                    // Validate the first argument as a hash reference
+                    if (argumentValues.Count > 0 && argumentValues[0] is not Dictionary<string, object>)
                     {
-                        object argumentValue = Evaluate(functionCallNode.Arguments[i]);
-                        _variableValues[parameterNode.Name] = argumentValue;
-                        Console.WriteLine($"[DEBUG] Parameter '{parameterNode.Name}' = {argumentValue}");
+                        AddError("[DEBUG] First argument must be a hash reference.");
+                        return null;
+                    }
+                }
+                else if (function.Parameters.Count != functionCallNode.Arguments.Count)
+                {
+                    AddError($"Interpretation Error: Function '{functionCallNode.FunctionName}' expects {function.Parameters.Count} arguments but got {functionCallNode.Arguments.Count}.");
+                    return null;
+                }
+                else
+                {
+                    // Assign arguments to named parameters
+                    for (int i = 0; i < function.Parameters.Count; i++)
+                    {
+                        if (function.Parameters[i] is VariableNode parameterNode1)
+                        {
+                            object argumentValue = Evaluate(functionCallNode.Arguments[i]);
+                            _variableValues[parameterNode1.Name] = argumentValue;
+                            Console.WriteLine($"[DEBUG] Parameter '{parameterNode1.Name}' = {argumentValue}");
+                        }
                     }
                 }
 
@@ -1765,6 +1783,7 @@ namespace MTRAN.Interpreter
                     _variableValues = previousVariableValues;
                 }
 
+                Console.WriteLine($"[DEBUG] Function '{functionCallNode.FunctionName}' returned: {returnValue}");
                 return returnValue;
             }
             else if (node is VariableNode variableNode)

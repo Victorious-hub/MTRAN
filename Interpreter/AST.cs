@@ -516,6 +516,25 @@ namespace MTRAN.Interpreter
         {
             Keyword = keyword;
         }
+    }
 
+    public class ReferenceNode : ASTNode
+    {
+        public string ReferencedVariable { get; }
+
+        public ReferenceNode(string referencedVariable)
+        {
+            if (string.IsNullOrEmpty(referencedVariable))
+            {
+                throw new ArgumentException("Referenced variable cannot be null or empty.", nameof(referencedVariable));
+            }
+
+            ReferencedVariable = referencedVariable;
+        }
+
+        public override string ToString()
+        {
+            return $"ReferenceNode(ReferencedVariable: {ReferencedVariable})";
+        }
     }
 }
