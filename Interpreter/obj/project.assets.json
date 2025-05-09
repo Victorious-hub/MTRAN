@@ -194,19 +194,19 @@
     ]
   },
   "packageFolders": {
-    "/home/shyskov/.nuget/packages/": {}
+    "C:\\Users\\datan\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/shyskov/Documents/libs/sem6/MTRAN/Interpreter/Interpreter.csproj",
+      "projectUniqueName": "C:\\Users\\datan\\OneDrive\\Рабочий стол\\MTRAN\\Interpreter\\Interpreter.csproj",
       "projectName": "Interpreter",
-      "projectPath": "/home/shyskov/Documents/libs/sem6/MTRAN/Interpreter/Interpreter.csproj",
-      "packagesPath": "/home/shyskov/.nuget/packages/",
-      "outputPath": "/home/shyskov/Documents/libs/sem6/MTRAN/Interpreter/obj/",
+      "projectPath": "C:\\Users\\datan\\OneDrive\\Рабочий стол\\MTRAN\\Interpreter\\Interpreter.csproj",
+      "packagesPath": "C:\\Users\\datan\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\datan\\OneDrive\\Рабочий стол\\MTRAN\\Interpreter\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "/home/shyskov/.nuget/NuGet/NuGet.Config"
+        "C:\\Users\\datan\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
@@ -224,6 +224,11 @@
         "warnAsError": [
           "NU1605"
         ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
       }
     },
     "frameworks": {
@@ -251,7 +256,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/8.0.115/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.405/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

@@ -60,51 +60,78 @@ namespace MTRAN.Interpreter
             }
         }
 
+        private ASTNode ParseHashKey()
+        {
+            if (_currentToken.TokenType == PerlToken.STRING || _currentToken.TokenType == PerlToken.IDENT)
+            {
+                ASTNode key = new StringNode(_currentToken.Lexeme); // Handle quoted keys or identifiers
+                Eat(_currentToken.TokenType);
+                return key;
+            }
+            else
+            {
+                throw new Exception($"Expected hash key (STRING or IDENT), got {_currentToken.TokenType} at line {_currentToken.Line}.");
+            }
+        }
+        
+
         private ASTNode Factor()
         {
             Token token = _currentToken;
             
-            if (token.TokenType == PerlToken.POINTER_HASH)
-            {
-                Eat(PerlToken.POINTER_HASH); // Consume the POINTER_HASH token
+            //  if (token.TokenType == PerlToken.IDENT)
+            //     {
+            //         string variableName = token.Lexeme;
+            //         Eat(PerlToken.IDENT);
 
-                // Handle hash access with braces
-                if (_currentToken.TokenType == PerlToken.LBRACE)
-                {
-                    Eat(PerlToken.LBRACE); // Consume the opening brace
+            //         // Handle hash access with braces (e.g., $ref->{name})
+            //         if (_currentToken.TokenType == PerlToken.POINTER_HASH)
+            //         {
+            //             Eat(PerlToken.POINTER_HASH); // Consume the POINTER_HASH token
 
-                    // Parse the key inside the braces
-                    ASTNode key;
-                    if (_currentToken.TokenType == PerlToken.STRING || _currentToken.TokenType == PerlToken.IDENT)
-                    {
-                        key = new StringNode(_currentToken.Lexeme); // Handle quoted keys or identifiers
-                        Eat(_currentToken.TokenType);
-                    }
-                    else
-                    {
-                        throw new Exception($"Expected hash key (STRING or IDENT), got {_currentToken.TokenType} at line {_currentToken.Line}.");
-                    }
+            //             if (_currentToken.TokenType == PerlToken.LBRACE)
+            //             {
+            //                 Eat(PerlToken.LBRACE); // Consume the opening brace
 
-                    // Expect the closing brace '}'
-                    if (_currentToken.TokenType != PerlToken.RBRACE)
-                    {
-                        throw new Exception($"Expected '}}' after hash key, got {_currentToken.TokenType} at line {_currentToken.Line}.");
-                    }
-                    Eat(PerlToken.RBRACE); // Consume the closing brace
+            //                 // Parse the key inside the braces
+            //                 ASTNode key = ParseHashKey();
 
-                    // Check if this is an assignment
-                    if (_currentToken.TokenType == PerlToken.ASSIGN)
-                    {
-                        Eat(PerlToken.ASSIGN);
-                        ASTNode value = Expr(); // Parse the value being assigned
-                        return new HashElementAssignmentNode(null, key, value); // Return a HashElementAssignmentNode
-                    }
+            //                 // Expect the closing brace '}'
+            //                 if (_currentToken.TokenType != PerlToken.RBRACE)
+            //                 {
+            //                     throw new Exception($"Expected '}}' after hash key, got {_currentToken.TokenType} at line {_currentToken.Line}.");
+            //                 }
+            //                 Eat(PerlToken.RBRACE); // Consume the closing brace
 
-                    return new HashAccessNode(null, key); // Return a HashAccessNode for access
-                }
+            //                 // Create a `HashAccessNode` with the correct hash name and key
+            //                 return new HashAccessNode(variableName, key);
+            //             }
 
-                throw new Exception($"Expected '{{' after '->', got {_currentToken.TokenType} at line {_currentToken.Line}.");
-            }
+            //             throw new Exception($"Expected '{{' after '->', got {_currentToken.TokenType} at line {_currentToken.Line}.");
+            //         }
+
+            //         // Handle shorthand hash access (e.g., $ref{name})
+            //         if (_currentToken.TokenType == PerlToken.LBRACE)
+            //         {
+            //             Eat(PerlToken.LBRACE); // Consume the opening brace
+
+            //             // Parse the key inside the braces
+            //             ASTNode key = ParseHashKey();
+
+            //             // Expect the closing brace '}'
+            //             if (_currentToken.TokenType != PerlToken.RBRACE)
+            //             {
+            //                 throw new Exception($"Expected '}}' after hash key, got {_currentToken.TokenType} at line {_currentToken.Line}.");
+            //             }
+            //             Eat(PerlToken.RBRACE); // Consume the closing brace
+
+            //             // Create a `HashAccessNode` with the correct hash name and key
+            //             return new HashAccessNode(variableName, key);
+            //         }
+
+            //         // Handle other cases for IDENT
+            //         return new VariableNode(variableName);
+            //     }
             if (token.TokenType == PerlToken.REF_HASH)
             {
                 // Handle the REF_HASH token
@@ -205,6 +232,50 @@ namespace MTRAN.Interpreter
                     Eat(PerlToken.RPAREN);
                     return new FunctionCallNode(functionName, arguments);
                 }
+
+                 if (_currentToken.TokenType == PerlToken.POINTER_HASH)
+                    {
+                        Eat(PerlToken.POINTER_HASH); // Consume the POINTER_HASH token
+
+                        if (_currentToken.TokenType == PerlToken.LBRACE)
+                        {
+                            Eat(PerlToken.LBRACE); // Consume the opening brace
+
+                            // Parse the key inside the braces
+                            ASTNode key = ParseHashKey();
+
+                            // Expect the closing brace '}'
+                            if (_currentToken.TokenType != PerlToken.RBRACE)
+                            {
+                                throw new Exception($"Expected '}}' after hash key, got {_currentToken.TokenType} at line {_currentToken.Line}.");
+                            }
+                            Eat(PerlToken.RBRACE); // Consume the closing brace
+
+                            // Create a `HashAccessNode` with the correct hash name and key
+                            return new HashAccessNode(functionName, key);
+                        }
+
+                        throw new Exception($"Expected '{{' after '->', got {_currentToken.TokenType} at line {_currentToken.Line}.");
+                    }
+
+                    // Handle shorthand hash access (e.g., $ref{name})
+                    if (_currentToken.TokenType == PerlToken.LBRACE)
+                    {
+                        Eat(PerlToken.LBRACE); // Consume the opening brace
+
+                        // Parse the key inside the braces
+                        ASTNode key = ParseHashKey();
+
+                        // Expect the closing brace '}'
+                        if (_currentToken.TokenType != PerlToken.RBRACE)
+                        {
+                            throw new Exception($"Expected '}}' after hash key, got {_currentToken.TokenType} at line {_currentToken.Line}.");
+                        }
+                        Eat(PerlToken.RBRACE); // Consume the closing brace
+
+                        // Create a `HashAccessNode` with the correct hash name and key
+                        return new HashAccessNode(functionName, key);
+                    }
 
                 // Handle compound assignment operators
                 if (_currentToken.TokenType == PerlToken.ADD_ASSIGN || _currentToken.TokenType == PerlToken.SUB_ASSIGN ||

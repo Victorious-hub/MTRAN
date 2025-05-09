@@ -8,8 +8,6 @@ namespace MTRAN.Interpreter
         private Dictionary<string, object> _variableValues = new Dictionary<string, object>();
         private bool _skipToNextIteration = false;
 
-        private bool _skipNextTime = true;
-
         public void Analyze(ASTNode node)
         {
             if (node is ProgramNode programNode)
@@ -44,12 +42,36 @@ namespace MTRAN.Interpreter
             }
             else if (node is AssignmentNode assignmentNode)
             {
-                if (assignmentNode.Value is HashAccessNode hashAccessNode)
+                if (assignmentNode.Value is ReferenceNode referenceNode)
                 {
-                    Analyze(hashAccessNode);
+                    string referencedVariable = referenceNode.ReferencedVariable;
+
+                    // Check if the referenced variable is declared
+                    if (_symbolTable.IsVariableDeclared(referencedVariable))
+                    {
+                        string referencedType = _symbolTable.GetVariableType(referencedVariable);
+
+                        // Ensure the referenced variable is a hash
+                        if (referencedType.StartsWith("hash<"))
+                        {
+                            // Assign the reference type to the variable
+                            string referenceType = $"ref<{referencedType}>";
+                            _symbolTable.DeclareVariable(assignmentNode.Variable, referenceType);
+                            Console.WriteLine($"[DEBUG] Assigned variable '{assignmentNode.Variable}' the type '{referenceType}' as a reference to '{referencedVariable}'.");
+                        }
+                        else
+                        {
+                            AddError($"Semantic Error: Variable '{referencedVariable}' must be of type 'hash<keyType, valueType>' but got '{referencedType}'.");
+                        }
+                    }
+                    // else
+                    // {
+                    //     AddError($"Semantic Error: Referenced variable '{referencedVariable}' is not declared.");
+                    // }
                 }
                 else
                 {
+                    // Handle other assignment cases
                     if (!_symbolTable.IsVariableDeclared(assignmentNode.Variable))
                     {
                         string inferredType = assignmentNode.Value != null ? InferType(assignmentNode.Value) : "unknown";
@@ -311,6 +333,36 @@ namespace MTRAN.Interpreter
                     Analyze(element);
                 }
             }
+            else if (node is ReferenceNode referenceNode)
+            {
+                string referencedVariable = referenceNode.ReferencedVariable;
+
+                // Convert scalar reference ($person) to hash reference (%person) if needed
+                if (referencedVariable.StartsWith("\\%"))
+                {
+                    referencedVariable = referencedVariable.Substring(1); // Remove the backslash
+                }
+
+                // Check if the referenced variable is declared
+                if (!_symbolTable.IsVariableDeclared(referencedVariable))
+                {
+                    AddError($"Semantic Error: Referenced variable '{referencedVariable}' is not declared.");
+                }
+                else
+                {
+                    string referencedType = _symbolTable.GetVariableType(referencedVariable);
+
+                    // Ensure the referenced variable is a hash
+                    if (referencedType.StartsWith("hash<"))
+                    {
+                        Console.WriteLine($"[DEBUG] Resolved reference to variable '{referencedVariable}' with type '{referencedType}'.");
+                    }
+                    else
+                    {
+                        AddError($"Semantic Error: Variable '{referencedVariable}' must be of type 'hash<keyType, valueType>' but got '{referencedType}'.");
+                    }
+                }
+            }
             else if (node is FunctionNode functionNode)
             {
                 if (_symbolTable.IsFunctionDeclared(functionNode.Name))
@@ -398,7 +450,7 @@ namespace MTRAN.Interpreter
 
                 if (!arrayType.StartsWith("array<"))
                 {
-                    // AddError($"Semantic Error: The foreach loop requires an array to iterate over, but got '{arrayType}'.");
+                    AddError($"Semantic Error: The foreach loop requires an array to iterate over, but got '{arrayType}'.");
                     return;
                 }
 
@@ -589,10 +641,11 @@ namespace MTRAN.Interpreter
                     }
                 }
             }
-            else if (node is HashAccessNode hashAccessNode1)
+           else if (node is HashAccessNode hashAccessNode1)
             {
                 string hashName = hashAccessNode1.HashName;
                 Console.WriteLine($"[DEBUG] Analyzing hash access for '{hashName}'.");
+
                 // Convert scalar reference ($person) to hash reference (%person)
                 if (hashName.StartsWith("$"))
                 {
@@ -603,6 +656,7 @@ namespace MTRAN.Interpreter
                     }
                 }
 
+                // Check if the hash is declared
                 if (!_symbolTable.IsVariableDeclared(hashName))
                 {
                     AddError($"Semantic Error: Hash '{hashName}' is not declared.");
@@ -610,6 +664,13 @@ namespace MTRAN.Interpreter
                 else
                 {
                     string hashType = _symbolTable.GetVariableType(hashName);
+
+                    // Dereference if the hash is a reference
+                    if (hashType.StartsWith("ref<hash<"))
+                    {
+                        hashType = hashType.Substring(4, hashType.Length - 5); // Remove "ref<" and ">"
+                    }
+
                     if (!hashType.StartsWith("hash<"))
                     {
                         AddError($"Semantic Error: '{hashName}' is not a hash.");
@@ -650,13 +711,44 @@ namespace MTRAN.Interpreter
             {
                 AddError($"Semantic Error: Unsupported AST node type '{node.GetType().Name}'.");
             }
-
         }
 
         private string InferType(ASTNode node)
         {
             try 
             {
+                if (node is ReferenceNode referenceNode)
+                {
+                    string referencedVariable = referenceNode.ReferencedVariable;
+
+                    // Convert scalar reference ($person) to hash reference (%person) if needed
+                    if (referencedVariable.StartsWith("\\%"))
+                    {
+                        referencedVariable = referencedVariable.Substring(1); // Remove the backslash
+                    }
+
+                    // Check if the referenced variable is declared
+                    if (_symbolTable.IsVariableDeclared(referencedVariable))
+                    {
+                        string referencedType = _symbolTable.GetVariableType(referencedVariable);
+
+                        // Ensure the referenced variable is a hash
+                        if (referencedType.StartsWith("hash<"))
+                        {
+                            return $"ref<{referencedType}>";
+                        }
+                        else
+                        {
+                            AddError($"Semantic Error: Variable '{referencedVariable}' must be of type 'hash<keyType, valueType>' but got '{referencedType}'.");
+                            return "unknown";
+                        }
+                    }
+                    // else
+                    // {
+                    //     AddError($"Semantic Error: Referenced variable '{referencedVariable}' is not declared.");
+                    //     return "unknown";
+                    // }
+                }
                 if (node is VariableNode variableNode)
                 {
                     if (variableNode.Name == "shift")
@@ -832,7 +924,7 @@ namespace MTRAN.Interpreter
 
                     if (declaredParameterCount != providedArgumentCount)
                     {
-                        // AddError($"Semantic Error: Function '{functionCallNode.FunctionName}' expects {declaredParameterCount} arguments but {providedArgumentCount} were provided.");
+                        AddError($"Semantic Error: Function '{functionCallNode.FunctionName}' expects {declaredParameterCount} arguments but {providedArgumentCount} were provided.");
                     }
                     else
                     {
@@ -1091,16 +1183,16 @@ namespace MTRAN.Interpreter
                 _variableValues[compoundAssignmentNode.Variable] = result;
                 Console.WriteLine($"[INTERPRET] {compoundAssignmentNode.Variable} {compoundAssignmentNode.OperatorSymbol} {rightValue} = {result}");
             }
-            else if (node is VariableDeclarationNode declarationNode && declarationNode.Variable.StartsWith("%"))
+           else if (node is VariableDeclarationNode declarationNode && declarationNode.Variable.StartsWith("%"))
             {
                 string hashName = declarationNode.Variable;
 
-                Console.WriteLine($"[DEBUG] Declaring hash '{hashName}' with keyword '{declarationNode.Keyword}'.");
+                Console.WriteLine($"[DEBUG] Declaring hash '{hashName}'.");
 
                 var hashValues = new Dictionary<string, object>();
-                if (declarationNode.Value is HashNode hashNod1)
+                if (declarationNode.Value is HashNode hash1Node)
                 {
-                    foreach (var (key, value) in hashNod1.Elements)
+                    foreach (var (key, value) in hash1Node.Elements)
                     {
                         object evaluatedKey = Evaluate(key);
                         object evaluatedValue = Evaluate(value);
@@ -1123,6 +1215,7 @@ namespace MTRAN.Interpreter
                 else
                 {
                     _variableValues[hashName] = hashValues;
+                    Console.WriteLine($"rqqrwqwrqrwqrqwrqwrqwrqr : {hashName}");
                     Console.WriteLine($"[INTERPRET] {hashName} = {string.Join(", ", hashValues.Select(kv => $"{kv.Key} => {kv.Value}"))}");
                 }
             }
@@ -1155,14 +1248,29 @@ namespace MTRAN.Interpreter
                     Console.WriteLine($"[INTERPRET] {arrayName} = {string.Join(", ", arrayValues)}");
                 }
             }
-            else if (node is VariableDeclarationNode declarationNode4 && declarationNode4.Variable.StartsWith("$"))
+           else if (node is VariableDeclarationNode declarationNod4e && declarationNod4e.Variable.StartsWith("$"))
             {
-                string variableName = declarationNode4.Variable;
+                string variableName = declarationNod4e.Variable;
 
                 object value = null;
-                if (declarationNode4.Value != null)
+                if (declarationNod4e.Value != null)
                 {
-                    value = Evaluate(declarationNode4.Value);
+                    value = Evaluate(declarationNod4e.Value);
+
+                    // If the value is a reference to a hash, format it for display
+                    if (value is Dictionary<string, object> hash)
+                    {
+                        value = string.Join(", ", hash.Select(kv => $"\"{kv.Key}\" => {kv.Value}"));
+                        Console.WriteLine($"[INTERPRET] {variableName} = {value}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[INTERPRET] {variableName} = {value}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"[INTERPRET] {variableName} =");
                 }
 
                 if (_variableValues.ContainsKey(variableName))
@@ -1171,8 +1279,8 @@ namespace MTRAN.Interpreter
                 }
                 else
                 {
+                    Console.WriteLine($"2222222222222222222: {variableName}");
                     _variableValues[variableName] = value;
-                    Console.WriteLine($"[INTERPRET] {variableName} = {value}");
                 }
             }
             if (node is AssignmentNode assignmentNode)
@@ -1180,10 +1288,26 @@ namespace MTRAN.Interpreter
                 Console.WriteLine($"[DEBUG] Interpreting assignment for variable '{assignmentNode.Variable}'.");
 
                 object value = Evaluate(assignmentNode.Value);
-                Console.WriteLine($"[DEBUG] Evaluated value for '{assignmentNode.Variable}' is {value}.");
 
-                _variableValues[assignmentNode.Variable] = value;
-                Console.WriteLine($"[INTERPRET] {assignmentNode.Variable} = {value}");
+                // Handle hash references (e.g., \%person)
+                if (assignmentNode.Value is ReferenceNode referenceNode)
+                {
+                    string referencedHashName = referenceNode.ReferencedVariable;
+                    if (_variableValues.ContainsKey(referencedHashName))
+                    {
+                        _variableValues[assignmentNode.Variable] = _variableValues[referencedHashName];
+                        Console.WriteLine($"[DEBUG] Assigned reference '{assignmentNode.Variable}' to hash '{referencedHashName}'.");
+                    }
+                    else
+                    {
+                        AddError($"Interpretation Error: Referenced hash '{referencedHashName}' is not declared.");
+                    }
+                }
+                else
+                {
+                    _variableValues[assignmentNode.Variable] = value;
+                    Console.WriteLine($"[INTERPRET] {assignmentNode.Variable} = {value}");
+                }
             }
             else if (node is ParenthesizedExpression parenthesizedExpression)
             {
@@ -1248,21 +1372,17 @@ namespace MTRAN.Interpreter
 
                 Console.WriteLine($"[DEBUG] Function '{functionCallNode.FunctionName}' returned: {returnValue}");
             }
-
-            else if (node is PrintStatementNode printStatementNode1)
-            {
-                foreach (var argument in printStatementNode1.Arguments)
-                {
-                    object value = Evaluate(argument);
-                    Console.WriteLine(value);
-                }
-            }
             else if (node is PrintStatementNode printStatementNode)
             {
                 foreach (var argument in printStatementNode.Arguments)
                 {
                     object value = Evaluate(argument);
-                    if (value != null)
+                    if (value is Dictionary<string, object> hash)
+                    {
+                        // Serialize the hash into a readable string format
+                        Console.WriteLine(string.Join(", ", hash.Select(kv => $"\"{kv.Key}\" => {kv.Value}")));
+                    }
+                    else if (value != null)
                     {
                         Console.WriteLine(value);
                     }
@@ -1436,90 +1556,86 @@ namespace MTRAN.Interpreter
                     _skipToNextIteration = true; // Set the flag to skip the rest of the loop body
                 }
             }
-           else if (node is ForNode forNode1)
+           else if (node is ForNode forNode)
+{
+    Console.WriteLine("[DEBUG] Interpreting ForNode...");
+
+    // Execute the initialization
+    if (forNode.Initialization != null)
+    {
+        Interpret(forNode.Initialization);
+    }
+
+    while (true)
+    {
+        // Evaluate the condition
+        if (forNode.Condition == null)
+        {
+            AddError("Interpretation Error: ForNode condition is null.");
+            break;
+        }
+
+        object conditionValue = Evaluate(forNode.Condition);
+        Console.WriteLine($"[DEBUG] ForNode condition evaluated to: {conditionValue}");
+
+        // Ensure the condition is a boolean and stop the loop if it's false
+        if (conditionValue is bool condition && !condition)
+        {
+            break;
+        }
+        else if (!(conditionValue is bool))
+        {
+            AddError("Interpretation Error: ForNode condition must evaluate to a boolean.");
+            break;
+        }
+
+        _skipToNextIteration = false; // Reset the flag at the start of each iteration
+
+        // Execute the body of the loop
+        if (forNode.Body != null)
+        {
+            Console.WriteLine("[DEBUG] Executing ForNode body...");
+            Interpret(forNode.Body);
+
+            // Check if the `next` statement was encountered
+            if (_skipToNextIteration)
             {
-                Console.WriteLine("[DEBUG] Interpreting ForNode...");
-
-                // Execute the initialization
-                if (forNode1.Initialization != null)
+                Console.WriteLine("[DEBUG] 'next' encountered, skipping to the next iteration...");
+                // Execute the increment before continuing
+                if (forNode.Increment != null)
                 {
-                    Interpret(forNode1.Initialization);
+                    Console.WriteLine("[DEBUG] Executing ForNode increment...");
+                    Interpret(forNode.Increment);
                 }
-
-                while (true)
-                {
-                    // Evaluate the condition
-                    if (forNode1.Condition == null)
-                    {
-                        AddError("Interpretation Error: ForNode condition is null.");
-                        break;
-                    }
-
-                    object conditionValue = Evaluate(forNode1.Condition);
-                    Console.WriteLine($"[DEBUG] ForNode condition evaluated to: {conditionValue}");
-
-                    // Ensure the condition is a boolean and stop the loop if it's false
-                    if (conditionValue is bool condition && !condition)
-                    {
-                        break;
-                    }
-                    else if (!(conditionValue is bool))
-                    {
-                        AddError("Interpretation Error: ForNode condition must evaluate to a boolean.");
-                        break;
-                    }
-
-                    _skipToNextIteration = false; // Reset the flag at the start of each iteration
-
-                    // Execute the body of the loop
-                    if (forNode1.Body != null)
-                    {
-                        Console.WriteLine("[DEBUG] Executing ForNode body...");
-                        Interpret(forNode1.Body);
-
-                        // Check if the `next` statement was encountered
-                        if (_skipToNextIteration)
-                        {
-                            Console.WriteLine("[DEBUG] 'next' encountered, skipping to the next iteration...");
-                            // Execute the increment before continuing
-                            if (forNode1.Increment != null)
-                            {
-                                Console.WriteLine("[DEBUG] Executing ForNode increment...");
-                                Interpret(forNode1.Increment);
-                            }
-                            continue; // Skip the rest of the loop body and proceed to the next iteration
-                        }
-
-                        // Check if the `last` statement was encountered
-                        if (ContainsConditionalLastNode(forNode1.Body))
-                        {
-                            Console.WriteLine("[DEBUG] 'last' encountered, breaking out of the loop...");
-                            break; // Exit the loop
-                        }
-                    }
-                    else
-                    {
-                        AddError("Interpretation Error: ForNode body is null.");
-                        break;
-                    }
-
-                    // Execute the increment
-                    if (forNode1.Increment != null)
-                    {
-                        Console.WriteLine("[DEBUG] Executing ForNode increment...");
-                        Interpret(forNode1.Increment);
-                    }
-                    else
-                    {
-                        AddError("Interpretation Error: ForNode increment is null.");
-                        break;
-                    }
-                }
+                continue; // Skip the rest of the loop body and proceed to the next iteration
             }
-            else
+
+            // Check if the `last` statement was encountered
+            if (ContainsConditionalLastNode(forNode.Body))
             {
-                AddError($"Interpretation Error: Unsupported AST node type '{node.GetType().Name}'.");
+                Console.WriteLine("[DEBUG] 'last' encountered, breaking out of the loop...");
+                break; // Exit the loop
             }
+        }
+        else
+        {
+            AddError("Interpretation Error: ForNode body is null.");
+            break;
+        }
+
+        // Execute the increment
+        if (forNode.Increment != null)
+        {
+            Console.WriteLine("[DEBUG] Executing ForNode increment...");
+            Interpret(forNode.Increment);
+        }
+        else
+        {
+            AddError("Interpretation Error: ForNode increment is null.");
+            break;
+        }
+    }
+}
         }
 
     
@@ -1653,6 +1769,34 @@ namespace MTRAN.Interpreter
 
         private object Evaluate(ASTNode node)
         {
+           if (node is ReferenceNode referenceNode)
+            {
+                string referencedVariable = referenceNode.ReferencedVariable;
+
+                // Convert scalar reference ($person) to hash reference (%person) if needed
+                if (referencedVariable.StartsWith("\\%"))
+                {
+                    referencedVariable = referencedVariable.Substring(1); // Remove the backslash
+                }
+
+                if (_variableValues.ContainsKey(referencedVariable))
+                {
+                    object value = _variableValues[referencedVariable];
+
+                    // If the value is a hash, return it directly
+                    if (value is Dictionary<string, object> hash)
+                    {
+                        return hash;
+                    }
+
+                    return value;
+                }
+                else
+                {
+                    AddError($"Interpretation Error: Referenced variable '{referencedVariable}' is not declared.");
+                    return null;
+                }
+            }
             if (node is ParenthesizedExpression parenthesizedExpression)
             {
                 return Evaluate(parenthesizedExpression.Expression);
@@ -1661,35 +1805,48 @@ namespace MTRAN.Interpreter
             {
                 return intNode.Value;
             }
-            else if (node is HashAccessNode hashAccessNode)
-            {
-                string hashName = hashAccessNode.HashName;
+           else if (node is HashAccessNode hashAccessNode)
+{
+    string hashName = hashAccessNode.HashName;
 
-                // Convert scalar reference ($person) to hash reference (%person)
-                if (hashName.StartsWith("$"))
-                {
-                    hashName = "%" + hashName.Substring(1);
-                }
+    // Convert scalar reference ($person) to hash reference (%person) if needed
+    if (hashName.StartsWith("$"))
+    {
+        string potentialHashName = "%" + hashName.Substring(1);
+        if (_variableValues.ContainsKey(potentialHashName))
+        {
+            hashName = potentialHashName;
+        }
+        else if (_variableValues.ContainsKey(hashName) && _variableValues[hashName] is Dictionary<string, object> referencedHash)
+        {
+            // Dereference the hash reference
+            return EvaluateHashAccess(referencedHash, hashAccessNode.Key);
+        }
+    }
 
-                if (_variableValues.ContainsKey(hashName) && _variableValues[hashName] is Dictionary<string, object> hash)
-                {
-                    object key = Evaluate(hashAccessNode.Key);
-                    if (key is string keyString && hash.ContainsKey(keyString))
-                    {
-                        return hash[keyString];
-                    }
-                    else
-                    {
-                        AddError($"Interpretation Error: Key '{key}' not found in hash '{hashName}'.");
-                        return null;
-                    }
-                }
-                else
-                {
-                    AddError($"Interpretation Error: Hash '{hashName}' is not declared or is not a hash.");
-                    return null;
-                }
-            }
+    // Check if the hash is declared
+    if (_variableValues.ContainsKey(hashName))
+    {
+        object hashValue = _variableValues[hashName];
+
+        // If it's a hash, access the key
+        if (hashValue is Dictionary<string, object> hash)
+        {
+            return EvaluateHashAccess(hash, hashAccessNode.Key);
+        }
+        else
+        {
+            AddError($"Interpretation Error: Variable '{hashName}' is not a hash.");
+            return null;
+        }
+    }
+    else
+    {
+        AddError($"Interpretation Error: Hash '{hashName}' is not declared.");
+        return null;
+    }
+}
+
             else if (node is NumberNode numberNode)
             {
                 return numberNode.Value;
@@ -1744,13 +1901,6 @@ namespace MTRAN.Interpreter
                     var argumentValues = functionCallNode.Arguments.Select(Evaluate).ToList();
                     _variableValues["@_"] = argumentValues;
                     Console.WriteLine($"[DEBUG] @_ = [{string.Join(", ", argumentValues)}]");
-
-                    // Validate the first argument as a hash reference
-                    if (argumentValues.Count > 0 && argumentValues[0] is not Dictionary<string, object>)
-                    {
-                        AddError("[DEBUG] First argument must be a hash reference.");
-                        return null;
-                    }
                 }
                 else if (function.Parameters.Count != functionCallNode.Arguments.Count)
                 {
@@ -1786,11 +1936,19 @@ namespace MTRAN.Interpreter
                 Console.WriteLine($"[DEBUG] Function '{functionCallNode.FunctionName}' returned: {returnValue}");
                 return returnValue;
             }
-            else if (node is VariableNode variableNode)
+           else if (node is VariableNode variableNode)
             {
                 if (_variableValues.ContainsKey(variableNode.Name))
                 {
-                    return _variableValues[variableNode.Name];
+                    var value = _variableValues[variableNode.Name];
+
+                    // Handle array size (e.g., @array)
+                    if (variableNode.Name.StartsWith("@") && value is List<object> array)
+                    {
+                        return (int)array.Count; // Return the size of the array
+                    }
+
+                    return value;
                 }
                 else
                 {
@@ -1871,6 +2029,21 @@ namespace MTRAN.Interpreter
         }
 
 
+        private object EvaluateHashAccess(Dictionary<string, object> hash, ASTNode keyNode)
+{
+    object key = Evaluate(keyNode);
+    if (key is string keyString && hash.ContainsKey(keyString))
+    {
+        return hash[keyString];
+    }
+    else
+    {
+        AddError($"Interpretation Error: Key '{key}' not found in hash.");
+        return null;
+    }
+}
+
+
         private object PerformUnaryOperation(string operatorSymbol, string variableName)
         {
             if (!_variableValues.ContainsKey(variableName))
@@ -1926,8 +2099,10 @@ namespace MTRAN.Interpreter
 
         private object PerformBinaryOperation(string operatorSymbol, object left, object right, string variableName = null)
         {
+            Console.WriteLine($"QWRQWRQWRQW : {left} {right}");
             if (left is int leftInt && right is int rightInt)
             {
+                Console.WriteLine($"PENIS {leftInt} {rightInt}");
                 switch (operatorSymbol)
                 {
                     case "+":
@@ -1944,6 +2119,7 @@ namespace MTRAN.Interpreter
                     case "!=":
                         return leftInt != rightInt;
                     case "<":
+                        
                         return leftInt < rightInt;
                     case ">":
                         return leftInt > rightInt;
@@ -1970,6 +2146,7 @@ namespace MTRAN.Interpreter
             }
             else if (left is float leftFloat && right is float rightFloat)
             {
+                Console.WriteLine($"PENIS {left} {right}");
                 switch (operatorSymbol)
                 {
                     case "+":
@@ -2012,6 +2189,7 @@ namespace MTRAN.Interpreter
             }
             else if (left is string leftString && right is string rightString)
             {
+                Console.WriteLine($"PENIS {left} {right}");
                 switch (operatorSymbol)
                 {
                     case "==":
@@ -2025,6 +2203,7 @@ namespace MTRAN.Interpreter
             }
             else
             {
+                // Console.WriteLine($"PENIS {left} {right}");
                 AddError($"Interpretation Error: Unsupported operand types for operator '{operatorSymbol}'.");
                 return null;
             }

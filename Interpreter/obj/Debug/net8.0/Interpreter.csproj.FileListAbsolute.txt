@@ -22,3 +22,27 @@
 /home/shyskov/Documents/libs/sem6/MTRAN/Interpreter/obj/Debug/net8.0/Interpreter.pdb
 /home/shyskov/Documents/libs/sem6/MTRAN/Interpreter/obj/Debug/net8.0/Interpreter.genruntimeconfig.cache
 /home/shyskov/Documents/libs/sem6/MTRAN/Interpreter/obj/Debug/net8.0/ref/Interpreter.dll
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\bin\Debug\net8.0\Interpreter.exe
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\bin\Debug\net8.0\Interpreter.deps.json
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\bin\Debug\net8.0\Interpreter.runtimeconfig.json
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\bin\Debug\net8.0\Interpreter.dll
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\bin\Debug\net8.0\Interpreter.pdb
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\bin\Debug\net8.0\AtkSharp.dll
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\bin\Debug\net8.0\CairoSharp.dll
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\bin\Debug\net8.0\GdkSharp.dll
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\bin\Debug\net8.0\GioSharp.dll
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\bin\Debug\net8.0\GLibSharp.dll
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\bin\Debug\net8.0\GtkSharp.dll
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\bin\Debug\net8.0\PangoSharp.dll
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\obj\Debug\net8.0\Interpreter.csproj.AssemblyReference.cache
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\obj\Debug\net8.0\Interpreter.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\obj\Debug\net8.0\Interpreter.AssemblyInfoInputs.cache
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\obj\Debug\net8.0\Interpreter.AssemblyInfo.cs
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\obj\Debug\net8.0\Interpreter.csproj.CoreCompileInputs.cache
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\obj\Debug\net8.0\Interpreter.sourcelink.json
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\obj\Debug\net8.0\Interpre.3FB56443.Up2Date
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\obj\Debug\net8.0\Interpreter.dll
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\obj\Debug\net8.0\refint\Interpreter.dll
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\obj\Debug\net8.0\Interpreter.pdb
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\obj\Debug\net8.0\Interpreter.genruntimeconfig.cache
+C:\Users\datan\OneDrive\Рабочий стол\MTRAN\Interpreter\obj\Debug\net8.0\ref\Interpreter.dll
