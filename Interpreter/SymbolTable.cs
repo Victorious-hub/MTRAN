@@ -111,10 +111,10 @@ namespace MTRAN.Interpreter
 
         public void DeclareVariable(string variable, string type)
         {
-            if (_scopes.Peek().ContainsKey(variable))
-            {
-                throw new Exception($"Semantic Error: Variable '{variable}' is already declared in the current scope.");
-            }
+            // if (_scopes.Peek().ContainsKey(variable))
+            // {
+            //     throw new Exception($"Semantic Error: Variable '{variable}' is already declared in the current scope.");
+            // }
 
             _scopes.Peek()[variable] = type;
             Console.WriteLine($"[DEBUG] Declared variable '{variable}' of type '{type}' in the current scope.");

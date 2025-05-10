@@ -26,6 +26,7 @@ namespace MTRAN.Interpreter
         AND,                // and
         NOT,                // not
         XOR,                // xor
+        EQ,
         LOR,                // ||
         LAND,               // &&
         LNOT,               // !
@@ -98,22 +99,32 @@ namespace MTRAN.Interpreter
 
         HASH_ASSIGN   ,            //: '=>' ;
         BLESS,
-        NEW,
+        // NEW,
         SHIFT,
         NEXT,
         REF_HASH,
 
         POINTER_HASH,
+        POWER,
+        INPUT,
+        REGEX,
+        EQUAL_TILDA,
+        UNLESS,
+        LOOP_DOT
     }
     
     public class TokenDictionary
     {
         public readonly Dictionary<PerlToken, string> KeywordPatterns = new()
         {
+             { PerlToken.SHIFT, @"\bshift\b" },                        // my (e.g., my)
+            { PerlToken.INPUT, @"\b<STDIN>\b" },
+            { PerlToken.UNLESS, @"\bunless\b" },
+            { PerlToken.EQUAL, @"\beq\b" },
             { PerlToken.NEXT, @"\bnext\b" },
             { PerlToken.LAST, @"\blast\b" },                        // last (e.g., last)
             { PerlToken.BLESS, @"\bbless\b" },                        // my (e.g., my)
-            { PerlToken.NEW, @"\bnew\b" },                        // my (e.g., my)
+            // { PerlToken.NEW, @"\bnew\b" },                        // my (e.g., my)
             { PerlToken.MY, @"\bmy\b" },                        // my (e.g., my)
             { PerlToken.IF, @"\bif\b" },                        // if (e.g., if)
             { PerlToken.ELSE, @"\belse\b" },                    // else (e.g., else)
@@ -136,9 +147,11 @@ namespace MTRAN.Interpreter
             // { PerlToken.COMMENT, @"#.*" },                      // comment (single line)
             
             /* Special tokens */
+            { PerlToken.LOOP_DOT, @"\.\." },
+            { PerlToken.REGEX, @"\/[^\/]*\/[igm]*" },
             { PerlToken.POINTER_HASH, @"->" },                         // assignment (e.g., =)
-            { PerlToken.SHIFT, @"\bshift\b" },                        // my (e.g., my)
-            { PerlToken.NEW, @"\new\b" },                        // my (e.g., my)
+           
+            // { PerlToken.NEW, @"\new\b" },                        // my (e.g., my)
             { PerlToken.REF_HASH, @"\\%[a-zA-Z_]\w*" },
             { PerlToken.IDENT, @"[\$@%][a-zA-Z_]\w*" },                // variable (e.g., $a, $var_name)
 
@@ -152,6 +165,7 @@ namespace MTRAN.Interpreter
             { PerlToken.BIN, @"\b0[bB][01]+\b" },
             { PerlToken.IMAG, @"\b\d+(\.\d+)?i\b" },             // imaginary number (e.g., 123.45i)
 
+            { PerlToken.POWER, @"\**" },
             { PerlToken.ADD, @"\+" },                           // addition (e.g., +)
             { PerlToken.SUB, @"-" },                            // subtraction (e.g., -)
             { PerlToken.MUL, @"\*" },                           // multiplication (e.g., *)
@@ -174,6 +188,7 @@ namespace MTRAN.Interpreter
             { PerlToken.ELLIPSIS, @"\.\.\." },                   // ellipsis (e.g., ...)
             { PerlToken.HASH_ASSIGN, @"=>" },                  // less or equal (e.g., <=)
 
+             { PerlToken.EQUAL_TILDA, @"\=~" },                   // addition assignment (e.g., +=)
             { PerlToken.NOT_EQUAL, @"!=" },                     // not equal (e.g., !=)
             { PerlToken.LESS_OR_EQUAL, @"<=" },                  // less or equal (e.g., <=)
             { PerlToken.LESS, @"<=" },                           // less than (e.g., <)

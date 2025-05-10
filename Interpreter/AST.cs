@@ -78,6 +78,20 @@ namespace MTRAN.Interpreter
         }
     }
 
+    public class UnlessNode : ASTNode
+    {
+        public ASTNode Condition { get; }
+        public ASTNode ThenBranch { get; }
+        public ASTNode ElseBranch { get; }
+
+        public UnlessNode(ASTNode condition, ASTNode thenBranch, ASTNode elseBranch)
+        {
+            Condition = condition;
+            ThenBranch = thenBranch;
+            ElseBranch = elseBranch;
+        }
+    }
+
     public class ParameterDeclarationNode : ASTNode
     {
         public List<VariableNode> Parameters { get; }
@@ -258,6 +272,26 @@ namespace MTRAN.Interpreter
         }
     }
 
+
+    public class ConstructorCallNode : ASTNode
+    {
+        public string PackageName { get; }
+        public string ConstructorName { get; }
+        public List<ASTNode> Arguments { get; }
+
+        public ConstructorCallNode(string packageName, string constructorName, List<ASTNode> arguments)
+        {
+            PackageName = packageName;
+            ConstructorName = constructorName;
+            Arguments = arguments;
+        }
+
+        public override string ToString()
+        {
+            return $"{PackageName}->{ConstructorName}({string.Join(", ", Arguments)})";
+        }
+    }
+
     public class VariableDeclarationNode : ASTNode
     {
         public string Keyword { get; set; }
@@ -314,6 +348,98 @@ namespace MTRAN.Interpreter
         }
     }
 
+    public class ShiftNode : ASTNode
+    {
+        public override string ToString()
+        {
+            return "ShiftNode()";
+        }
+    }   
+
+    public class IdentifierNode : ASTNode
+    {
+        public string Name { get; }
+
+        public IdentifierNode(string name)
+        {
+            Name = name;
+        }
+
+        public override string ToString()
+        {
+            return Name;
+        }
+    }
+
+
+    public class MethodCallNode : ASTNode
+    {
+        public ASTNode Target { get; }
+        public string MethodName { get; }
+        public List<ASTNode> Arguments { get; }
+
+        public MethodCallNode(ASTNode target, string methodName, List<ASTNode> arguments)
+        {
+            Target = target;
+            MethodName = methodName;
+            Arguments = arguments;
+        }
+
+        public override string ToString()
+        {
+            return $"MethodCallNode(Target: {Target}, MethodName: {MethodName}, Arguments: [{string.Join(", ", Arguments)}])";
+        }
+    }
+
+
+    public class ForRangeNode : ASTNode
+    {
+        public VariableDeclarationNode LoopVariable { get; }
+        public ASTNode Start { get; }
+        public ASTNode End { get; }
+        public ASTNode Body { get; }
+
+        public ForRangeNode(VariableDeclarationNode loopVariable, ASTNode start, ASTNode end, ASTNode body)
+        {
+            LoopVariable = loopVariable;
+            Start = start;
+            End = end;
+            Body = body;
+        }
+
+        public override string ToString()
+        {
+            return $"ForRangeNode(LoopVariable: {LoopVariable}, Start: {Start}, End: {End}, Body: {Body})";
+        }
+    }
+
+
+
+    public class RegexNode : ASTNode
+    {
+        public string Pattern { get; }
+
+        public RegexNode(string pattern)
+        {
+            Pattern = pattern;
+        }
+
+        public override string ToString()
+        {
+            return $"RegexNode({Pattern})";
+        }
+    }
+
+    public class InputNode : ASTNode
+    {
+        public InputNode() { }
+
+        public override string ToString()
+        {
+            return "InputNode(<STDIN>)";
+        }
+    }
+
     public class ForeachNode : ASTNode
     {
         public ASTNode VariableDeclaration { get; }
@@ -351,20 +477,27 @@ namespace MTRAN.Interpreter
     }
 
     public class FunctionNode : ASTNode
-{
-    public string Name { get; }
-    public List<ASTNode> Parameters { get; }
-    public ASTNode Body { get; }
-
-    public FunctionNode(string name, List<ASTNode> parameters, ASTNode body)
     {
-        Name = name;
-        Parameters = parameters;
-        Body = body;
+        public string Name { get; }
+        public List<ASTNode> Parameters { get; }
+        public ASTNode Body { get; }
+        public bool IsMethod { get; }
+        public string? ClassName { get; }
+
+        public FunctionNode(string name, List<ASTNode> parameters, ASTNode body, bool isMethod = false, string? className = null)
+        {
+            Name = name;
+            Parameters = parameters;
+            Body = body;
+            IsMethod = isMethod;
+            ClassName = className;
+        }
+
+        public override string ToString()
+        {
+            return $"{(IsMethod ? "Method" : "Function")} {Name} {(ClassName != null ? $"of class {ClassName}" : "")}";
+        }
     }
-
-
-}
 
     public class ArrayNode : ASTNode
     {
@@ -408,6 +541,28 @@ namespace MTRAN.Interpreter
         {
             Name = name;
             Elements = elements;
+        }
+    }
+
+    public class HashKeysNode : ASTNode
+    {
+        public string HashName { get; }
+
+        public HashKeysNode(string hashName)
+        {
+            HashName = hashName;
+        }
+    }
+
+    public class ConstantDeclarationNode : ASTNode
+    {
+        public string Name { get; }
+        public ASTNode Value { get; }
+
+        public ConstantDeclarationNode(string name, ASTNode value)
+        {
+            Name = name;
+            Value = value;
         }
     }
 

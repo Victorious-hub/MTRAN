@@ -243,9 +243,11 @@ namespace MTRAN.Interpreter
                         case PerlToken.BIN:
                             constants.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description, tokenData.token));
                             break;
+                        case PerlToken.REGEX:
                         case PerlToken.COMMA:
                         case PerlToken.SEMICOLON:
                         case PerlToken.DOT:
+                        case PerlToken.LOOP_DOT:
                         case PerlToken.LPAREN:
                         case PerlToken.RPAREN:
                         case PerlToken.LBRACE:
@@ -255,6 +257,8 @@ namespace MTRAN.Interpreter
                         case PerlToken.COLON:
                             delimiters.Add((tokenType, tokenData.line, tokenData.column, tokenData.id, description, tokenData.token));
                             break;
+                        case PerlToken.ILLEGAL:
+                        case PerlToken.POWER:
                         case PerlToken.ADD:
                         case PerlToken.SUB:
                         case PerlToken.MUL:
@@ -335,6 +339,28 @@ namespace MTRAN.Interpreter
                 {
                     var currentChar = line[_index];
 
+                    if (line[_index] == '/' && _index + 1 < line.Length)
+                    {
+                        int start = _index;
+                        _index++; // Skip the initial '/'
+
+                        while (_index < line.Length && line[_index] != '/')
+                        {
+                            _index++;
+                        }
+
+                        if (_index < line.Length && line[_index] == '/')
+                        {
+                            _index++; // Skip the closing '/'
+                            string regexPattern = line.Substring(start, _index - start);
+                            var token = new Token(PerlToken.REGEX, regexPattern, _line, _column, "Regular Expression");
+                            tokens.Add(token);
+                            AddToOutputTokens(token);
+                            _column += regexPattern.Length;
+                            continue;
+                        }
+                    }
+
                     if (_index + 1 < line.Length && line[_index] == '-' && line[_index + 1] == '>')
                     {
                         Console.WriteLine($"Found a pointer hash operator at line {_line}, column {_column}");
@@ -343,6 +369,16 @@ namespace MTRAN.Interpreter
                         _index += 2; // Skip the '->'
                         _column += 2;
                         AddToOutputTokens(token);
+                        continue;
+                    }
+
+                    if (line.Substring(_index).StartsWith("<STDIN>"))
+                    {
+                        var token = new Token(PerlToken.INPUT, "<STDIN>", _line, _column, "Input (<STDIN>)") { Id = id++ };
+                        tokens.Add(token);
+                        AddToOutputTokens(token);
+                        _index += 7; // Skip the "<STDIN>"
+                        _column += 7;
                         continue;
                     }
 
@@ -371,6 +407,17 @@ namespace MTRAN.Interpreter
                     if (char.IsWhiteSpace(currentChar))
                     {
                         HandleWhitespace(line);
+                        continue;
+                    }
+
+                    if (line.Substring(_index).StartsWith("sub") && 
+                        (_index + 3 >= line.Length || !char.IsLetterOrDigit(line[_index + 3])))
+                    {
+                        var token = new Token(PerlToken.FUNC_SUB, "sub", _line, _column, "Function declaration (sub)") { Id = id++ };
+                        tokens.Add(token);
+                        AddToOutputTokens(token);
+                        _index += 3; // Skip the "sub"
+                        _column += 3;
                         continue;
                     }
 
@@ -573,8 +620,18 @@ namespace MTRAN.Interpreter
 
         private (PerlToken? token, int length) IsOperator(string line)
         {
+           
             switch (line[_index])
             {
+
+                case '.':
+                    // Check for '..' operator
+                    if (_index + 1 < line.Length && line[_index + 1] == '.')
+                    {
+                        // Ensure '..' is treated as an operator
+                        return (PerlToken.LOOP_DOT, 2); // Match '..'
+                    }
+                    return (PerlToken.DOT, 1);
                 case '+':
                     if (_index + 1 < line.Length && line[_index + 1] == '+')
                         return (PerlToken.INC, 2);
@@ -583,7 +640,11 @@ namespace MTRAN.Interpreter
                     if (_index + 1 < line.Length && line[_index + 1] == '-')
                         return (PerlToken.DEC, 2);
                     return (line[_index + 1] == '=' ? PerlToken.SUB_ASSIGN : PerlToken.SUB, line[_index + 1] == '=' ? 2 : 1);
+                // case '*':
+                //     return (line[_index + 1] == '*' ? PerlToken.POWER : PerlToken.MUL, line[_index + 1] == '*' ? 2 : 1);
                 case '*':
+                    if (_index + 1 < line.Length && line[_index + 1] == '*')
+                        return (PerlToken.POWER, 2);
                     return (line[_index + 1] == '=' ? PerlToken.MUL_ASSIGN : PerlToken.MUL, line[_index + 1] == '=' ? 2 : 1);
                 case '/':
                     return (line[_index + 1] == '=' ? PerlToken.DIV_ASSIGN : PerlToken.DIV, line[_index + 1] == '=' ? 2 : 1);
@@ -604,6 +665,8 @@ namespace MTRAN.Interpreter
                 case '=':
                     if (_index + 1 < line.Length && line[_index + 1] == '=')
                         return (PerlToken.EQUAL, 2);
+                    if (_index + 1 < line.Length && line[_index + 1] == '~')
+                        return (PerlToken.EQUAL_TILDA, 2);
                     if (_index + 1 < line.Length && line[_index + 1] == '>')
                         return (PerlToken.HASH_ASSIGN, 2);
                     return (PerlToken.ASSIGN, 1);
