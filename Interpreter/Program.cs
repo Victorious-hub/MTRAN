@@ -60,7 +60,7 @@ namespace MTRAN.Interpreter
                     // Perform interpretation
                     Console.WriteLine("\nInterpreting the program...");
                     interpreterAnalyzer.Interpret(ast);   // Interpret the AST
-                    // // interpreterAnalyzer.PrintVariableValues(); // Print variable values after interpretation
+                    // interpreterAnalyzer.PrintVariableValues(); // Print variable values after interpretation
                 }
                 catch (Exception ex)
                 {
@@ -165,6 +165,13 @@ namespace MTRAN.Interpreter
                     Console.WriteLine($"{prefix}  Constant Name: {useNode.ConstantName}");
                     Console.WriteLine($"{prefix}  Value:");
                     PrintAST(useNode.Value, indent + 2, prefix + "    ");
+                }
+                else if (node is ConstantDeclarationNode constantNode)
+                {
+                    Console.WriteLine(prefix + "Constant Declaration:");
+                    Console.WriteLine(prefix + "  Name: " + constantNode.Name);
+                    Console.WriteLine(prefix + "  Value:");
+                    PrintAST(constantNode.Value, indent + 4, prefix + "    ");
                 }
                  else if (node is UnlessNode unlessNode)
                 {

@@ -375,33 +375,19 @@
 
 # }
 
-
-# my $person1 = new("Bob", 28, "Chicago");
-# # my $name = $person1->info();
-# print $person1->info();
-
-# my @people = (
-#     new("Alice", 30, "New York"),
-#     new("John", 25, "Los Angeles")
-# );
-
-# # # Цикл для вывода информации о всех людях
-# foreach my $person (@people) {
-#     print $person->info();
-# }
-
-
-# use constant GREETING => "Welcome to the Perl world!";
-# print GREETING . "ццццццццццццц";
-
-
-
-
 # use strict;
 # use warnings;
+# use constant PI => 3.14159;  # Числовая константа
+
+# # Текстовая константа
+# use constant GREETING => "Hello, World!";
+
+# # Массив с числами
+# my @numbers = (1, 2, 3, 4, 5);
+
+# Хэш с данными о человеке
 use strict;
 use warnings;
-
 use constant PI => 3.14159;  # Числовая константа
 
 # Текстовая константа
@@ -412,9 +398,9 @@ my @numbers = (1, 2, 3, 4, 5);
 
 # Хэш с данными о человеке
 my %person = (
-    "name" => "Alice",
-    "age"  => 30,
-    "city" => "New York"
+    name => "Alice",
+    age  => 30,
+    city => "New York"
 );
 
 # Цикл for: вычисление квадратов чисел
@@ -432,15 +418,14 @@ if (PI > 3) {
 # Цикл foreach для перебора хэша
 print "Person information:\n";
 foreach my $key (keys %person) {
-    print "$key", $person{$key};
+    print "$key: $person{$key}\n";
 }
-
 
 
 sub factorial {
     my $n = shift;
     my $result = 1;
-    for my $i (1 ..$n) {
+    for my $i (1..$n) {
         $result *= $i;  # Умножаем на каждое число
     }
     return $result;
@@ -448,16 +433,17 @@ sub factorial {
 
 # Ввод числа для вычисления факториала
 print "Enter a number: ";
-my $num = 4;
-# chomp($num);
+my $num = 5;
+chomp($num);
 
+# Условие, проверяющее корректность ввода
 if ($num =~ /^[0-9]+$/) {
-    print "The factorial of $num is  " . factorial($num) . "\n";
+    print "The factorial of $num is " . factorial($num) . "\n";
 } else {
     print "Please enter a valid number.\n";
 }
-print "The factorial of $num  is  " . factorial($num) . "\n";
 
+# Цикл while для подсчета до 5
 my $counter = 1;
 while ($counter <= 5) {
     print "Counter is: $counter\n";
@@ -468,6 +454,7 @@ while ($counter <= 5) {
 unless ($num < 0) {
     print "The number is non-negative.\n";
 }
+
 
 package Person;
 
@@ -486,23 +473,21 @@ sub new {
 # Метод для вывода информации о человеке
 sub info {
     my $self = shift;
-    print "Name:", $self->{"name"};
-    print "Age:", $self->{"age"};
-    print "City:", $self->{"city"};
-
+    print "Name: $self->{name}\n";
+    print "Age: $self->{age}\n";
+    print "City: $self->{city}\n";
 }
 
 # Основная программа
 package main;
 
 # Создание объекта
-$person1 = Person->new("Bob", 28, "Chicago");
+my $person1 = Person->new("Bob", 28, "Chicago");
 
 # Вывод информации о человеке
-# print $person1->info();
 $person1->info();
 
-# # Массив с объектами Person
+# Массив с объектами Person
 my @people = (
     Person->new("Alice", 30, "New York"),
     Person->new("John", 25, "Los Angeles")

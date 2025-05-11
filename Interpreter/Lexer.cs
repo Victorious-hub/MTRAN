@@ -774,6 +774,10 @@ namespace MTRAN.Interpreter
 
             while (_index < line.Length && (char.IsDigit(line[_index]) || line[_index] == '.'))
             {
+                if (_index + 1 < line.Length && line[_index] == '.' && line[_index + 1] == '.')
+                {
+                    break;
+                }
                 if (line[_index] == '.')
                 {
                     decimalPointCount++;

@@ -110,14 +110,16 @@ namespace MTRAN.Interpreter
         REGEX,
         EQUAL_TILDA,
         UNLESS,
-        LOOP_DOT
+        LOOP_DOT,
+        CHOMP,
     }
     
     public class TokenDictionary
     {
         public readonly Dictionary<PerlToken, string> KeywordPatterns = new()
-        {
-             { PerlToken.SHIFT, @"\bshift\b" },                        // my (e.g., my)
+        {   
+            { PerlToken.CHOMP, @"\bchomp\b" }, 
+            { PerlToken.SHIFT, @"\bshift\b" },                        // my (e.g., my)
             { PerlToken.INPUT, @"\b<STDIN>\b" },
             { PerlToken.UNLESS, @"\bunless\b" },
             { PerlToken.EQUAL, @"\beq\b" },

@@ -69,21 +69,40 @@ namespace MTRAN.Interpreter
         {
             if (_currentToken.TokenType == PerlToken.STRING || _currentToken.TokenType == PerlToken.IDENT)
             {
-                ASTNode key = new StringNode(_currentToken.Lexeme); // Handle quoted keys or identifiers
+                // Ключи без кавычек (IDENT) тоже разрешены как строки
+                var key = new StringNode(_currentToken.Lexeme);
                 Eat(_currentToken.TokenType);
                 return key;
             }
             else
             {
-                throw new Exception($"Expected hash key (STRING or IDENT), got {_currentToken.TokenType} at line {_currentToken.Line}.");
+                throw new Exception($"Expected string or identifier as hash key, got {_currentToken.TokenType}");
             }
         }
-        
+                
 
         private ASTNode Factor()
         {
             Token token = _currentToken;
             
+            if (token.TokenType == PerlToken.CHOMP)
+            {
+                Eat(PerlToken.CHOMP);
+
+                if (_currentToken.TokenType == PerlToken.LPAREN)
+                {
+                    Eat(PerlToken.LPAREN);
+                    ASTNode arg = Expr();
+                    Eat(PerlToken.RPAREN);
+                    return new FunctionCallNode("chomp", new List<ASTNode> { arg });
+                }
+                else
+                {
+                    // В Perl допускается chomp $var без скобок
+                    ASTNode arg = Expr();
+                    return new FunctionCallNode("chomp", new List<ASTNode> { arg });
+                }
+            }
             if (_currentToken.TokenType == PerlToken.REGEX)
             {
                 string regexPattern = _currentToken.Lexeme;
@@ -161,12 +180,14 @@ namespace MTRAN.Interpreter
                 }
                 else
                 {
-                    // Просто пропускаем use strict; use warnings; и т.п.
+                    // Для use strict; use warnings; и других возвращаем UseNode
                     if (_currentToken.TokenType == PerlToken.IDENT)
                     {
+                        string pragmaName = _currentToken.Lexeme;
                         Eat(PerlToken.IDENT);
+                        return new UseNode(pragmaName);
                     }
-                    // Можно вернуть null или специальный UseNode, если нужно
+                    // Если нет идентификатора — можно вернуть null или специальный узел
                     return null;
                 }
             }
@@ -266,6 +287,8 @@ namespace MTRAN.Interpreter
                             arguments.Insert(0, new VariableNode(functionName));
                             // Имя функции делаем с префиксом класса, если нужно, или просто methodName
                             return new FunctionCallNode(methodName, arguments);
+
+                            
                         }
                         else
                         {
@@ -1023,13 +1046,25 @@ namespace MTRAN.Interpreter
                                     // if (isDeclaration)
                                     // {
                                     //     return new VariableDeclarationNode(keyword, variableToken.Lexeme, constructorCall);
-                                    // }
+                                    // }isDeclaration
                                     // else
                                     // {
                                     //     return new AssignmentNode(variableToken.Lexeme, constructorCall);
                                     // }
                                 }
-                                return new ConstructorCallNode(identifier, "new", arguments);
+                                if (isDeclaration)
+                                {
+                                    // ВАЖНО: первым аргументом должен быть объект/класс
+                                    arguments.Insert(0, new VariableNode(identifier));
+                                    var ctorCall = new FunctionCallNode("new", arguments);
+                                    return new VariableDeclarationNode(keyword, variableToken.Lexeme, ctorCall);
+                                }
+                                else
+                                {
+                                    arguments.Insert(0, new VariableNode(identifier));
+                                    var ctorCall = new FunctionCallNode("new", arguments);
+                                    return new AssignmentNode(variableToken.Lexeme, ctorCall);
+                                }
                             }
                             else
                             {
