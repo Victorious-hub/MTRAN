@@ -883,7 +883,7 @@ namespace MTRAN.Interpreter
 
             if (_currentToken.TokenType == PerlToken.ILLEGAL)
             {
-                string errorMessage = $"Invalid variable name '{_currentToken.Lexeme}' at line {_currentToken.Line}. Variable name must not start from number";
+                string errorMessage = $"Invalid v11ariable name '{_currentToken.Lexeme}' at line {_currentToken.Line}. Variable name must not start from number";
                 LogError(errorMessage);
                 throw new Exception(errorMessage);
             }
@@ -893,7 +893,7 @@ namespace MTRAN.Interpreter
                 string variableName = _currentToken.Lexeme;
                 if (!variableName.StartsWith("$") && !variableName.StartsWith("@") && !variableName.StartsWith("%"))
                 {
-                    string errorMessage = $"Invalid variable name '{variableName}' at line {_currentToken.Line}. Variable names must start with $, @, or %.";
+                    string errorMessage = $"Invalid v11ariable name '{variableName}' at line {_currentToken.Line}. Variable names must start with $, @, or %.";
                     LogError(errorMessage);
                     throw new Exception(errorMessage);
                 }

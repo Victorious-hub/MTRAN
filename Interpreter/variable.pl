@@ -502,3 +502,32 @@ foreach my $person (@people) {
 # Строковая константа
 use constant GREETING => "Welcome to the Perl world!";
 print GREETING . "\n";
+
+# Syntax errors
+# print 1 * 2) + 3;
+# my age = 4;
+# my $1age = 4;
+
+# $x = 10;
+# if $x > 0 {           # ошибка: условие не в скобках
+#     print "positive";
+# }
+
+
+#Semantic
+
+# use constant CONST => "42424";
+# print CONST . "\n";
+
+# use constant CONST => "232323";
+
+# my $val = 10;
+# if ($val == 10) {
+#     my $x = 10;
+#     # print 1;
+# }
+# $a = $x;
+# print 1 + "2";
+
+# my @array = (1,23);
+# @array++;

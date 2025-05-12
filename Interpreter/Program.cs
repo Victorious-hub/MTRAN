@@ -46,20 +46,20 @@ namespace MTRAN.Interpreter
 
                     //  var parser = new Parser(lexer);
                     // ASTNode ast = parser.Parse();
-                    // PrintAST(ast, 0, "Program");
+                    PrintAST(ast, 0, "Program");
 
                     // Perform semantic analysis
-                    var interpreterAnalyzer = new InterpreterAnalyzer();
-                    interpreterAnalyzer.Analyze(ast);
+                    // var interpreterAnalyzer = new InterpreterAnalyzer();
+                    // interpreterAnalyzer.Analyze(ast);
 
-                    // // Console.WriteLine("Semantic analysis completed successfully.");
-                    // // Console.WriteLine("\nSemantic Tree:");
-                    // // semanticAnalyzer.PrintSymbolTable();
-                    interpreterAnalyzer.ReportErrors();   // Print all semantic errors
+                    // // // Console.WriteLine("Semantic analysis completed successfully.");
+                    // // // Console.WriteLine("\nSemantic Tree:");
+                    // // // semanticAnalyzer.PrintSymbolTable();
+                    // interpreterAnalyzer.ReportErrors();   // Print all semantic errors
 
-                    // Perform interpretation
-                    Console.WriteLine("\nInterpreting the program...");
-                    interpreterAnalyzer.Interpret(ast);   // Interpret the AST
+                    // // Perform interpretation
+                    // Console.WriteLine("\nInterpreting the program...");
+                    // interpreterAnalyzer.Interpret(ast);   // Interpret the AST
                     // interpreterAnalyzer.PrintVariableValues(); // Print variable values after interpretation
                 }
                 catch (Exception ex)

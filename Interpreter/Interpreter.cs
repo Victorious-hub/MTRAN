@@ -179,9 +179,9 @@ namespace MTRAN.Interpreter
                     // Treat 'shift' as a built-in function
                     Console.WriteLine($"[DEBUG] Treated 'shift' as a built-in function.");
                 }
-                else if (!_symbolTable.IsVariableDeclared(variableNode.Name))
+                else if (!_symbolTable.IsVariableDeclared(variableNode.Name) && !_symbolTable.IsClassDeclared(variableNode.Name))
                 {
-                    // AddError($"Semantic Error: Variable '{variableNode.Name}' is not declared.");
+                    AddError($"Semantic Error: Variable or class '{variableNode.Name}' is not declared.");
                 }
             }
             else if (node is CompoundAssignmentNode compoundAssignmentNode)
@@ -206,7 +206,7 @@ namespace MTRAN.Interpreter
                 }
                 else
                 {
-                    // AddError($"Semantic Error: Operator '{compoundAssignmentNode.OperatorSymbol}' is not valid for types '{variableType}' and '{valueType}'.");
+                    AddError($"Semantic Error: Operator '{compoundAssignmentNode.OperatorSymbol}' is not valid for types '{variableType}' and '{valueType}'.");
                 }
 
                 // Analyze the value expression
@@ -334,6 +334,16 @@ namespace MTRAN.Interpreter
                 // Анализируй start, end и тело цикла
                 Analyze(forRangeNode.Start);
                 Analyze(forRangeNode.End);
+
+                if (forRangeNode.LoopVariable is VariableDeclarationNode loopVariable)
+                {
+                    if (!_symbolTable.IsVariableDeclared(loopVariable.Variable))
+                    {
+                        _symbolTable.DeclareVariable(loopVariable.Variable, "int");
+                        Console.WriteLine($"[DEBUG] Implicitly declared loop variable '{loopVariable.Variable}' as 'int'.");
+                    }
+                }
+
                 Analyze(forRangeNode.Body);
             }
             else if (node is RegexNode regexNode)
@@ -499,6 +509,7 @@ namespace MTRAN.Interpreter
             }
             else if (node is ClassNode classNode)
             {
+                //  _symbolTable.DeclareVariable(classNode.ClassName.ToString());
                 if (_symbolTable.IsClassDeclared(classNode.ClassName))
                 {
                     AddError($"Semantic Error: Class '{classNode.ClassName}' is already declared.");
@@ -583,7 +594,29 @@ namespace MTRAN.Interpreter
             {
                 foreach (var element in hashNode.Elements)
                 {
-                    Analyze(element.Key);
+                    // Analyze the key
+                    if (element.Key is VariableNode keyNode)
+                    {
+                        // Treat hash keys as strings by default
+                        string keyName = keyNode.Name;
+                        if (!_symbolTable.IsVariableDeclared(keyName))
+                        {
+                            // If the key is not declared as a variable, treat it as a string
+                            Console.WriteLine($"[DEBUG] Treating hash key '{keyName}' as a string.");
+                        }
+                        else
+                        {
+                            // If the key is declared as a variable, analyze it
+                            Analyze(keyNode);
+                        }
+                    }
+                    else
+                    {
+                        // Analyze non-variable keys (e.g., string literals)
+                        Analyze(element.Key);
+                    }
+
+                    // Analyze the value
                     Analyze(element.Value);
                 }
             }

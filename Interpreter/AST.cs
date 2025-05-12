@@ -158,25 +158,25 @@ namespace MTRAN.Interpreter
         }
     }
 
-        public class UseNode : ASTNode
+    public class UseNode : ASTNode
+    {
+        public string ConstantName { get; }
+        public ASTNode? Value { get; }
+
+        // Для use constant NAME => VALUE
+        public UseNode(string constantName, ASTNode value)
         {
-            public string ConstantName { get; }
-            public ASTNode? Value { get; }
-
-            // Для use constant NAME => VALUE
-            public UseNode(string constantName, ASTNode value)
-            {
-                ConstantName = constantName;
-                Value = value;
-            }
-
-            // Для use strict; use warnings; и т.п.
-            public UseNode(string constantName)
-            {
-                ConstantName = constantName;
-                Value = null;
-            }
+            ConstantName = constantName;
+            Value = value;
         }
+
+        // Для use strict; use warnings; и т.п.
+        public UseNode(string constantName)
+        {
+            ConstantName = constantName;
+            Value = null;
+        }
+    }
 
     public class ArrayElementAssignmentNode : ASTNode
     {
